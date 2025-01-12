@@ -23,6 +23,10 @@ const ENV = process.env.NODE_ENV;
     ConfigModule.forRoot({ envFilePath: !ENV ? '.env' : `.env.${ENV}` }),
     MongooseModule.forRoot(process.env.MONGOURL, {
       dbName: process.env.DATABASE,
+      connectionFactory: (connection) => {
+        console.log(`Connected to database: ${process.env.DATABASE}`);
+        return connection;
+      },
     }),
     AuthModule,
     UsersModule,
@@ -37,7 +41,7 @@ const ENV = process.env.NODE_ENV;
     CategoryModule,
     ImageModule,
     NavigationModule,
-    PagesModule
+    PagesModule,
   ],
   controllers: [],
   providers: [],

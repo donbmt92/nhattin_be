@@ -11,4 +11,4 @@ export class CreateImageDto {
   @IsString()
   @IsNotEmpty()
   link: string;
-} 
+}

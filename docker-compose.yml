@@ -1,10 +1,22 @@
-version: '3'
+#version: '3'
+#services:
+#  mongo:
+#    image: mongo:4.2
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: root
+#      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+#      MONGO_INITDB_DATABASE: remote
+#    ports:
+#      - "27017:27017"
+version: "3.7"
 services:
-  mongo:
-    image: mongo:4.2
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rootpassword
-      MONGO_INITDB_DATABASE: remote
+  # Your NestJS container
+  backend:
+    build:
+      context: ./docker # where the Dockerfile above lies
+    command: npm run start:debug
     ports:
-      - "27017:27017"
+      - "3000:3000"	# default NestJS serving port
+      - "9229:9229"	# remember to open this port for the debugger
+    volumes:
+      - ./test-nestjs:/app

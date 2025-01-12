@@ -7,7 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
-  Query
+  Query,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -72,4 +72,4 @@ export class ProductsController {
   remove(@Param('id') id: string) {
     return this.productsService.remove(id);
   }
-} 
+}

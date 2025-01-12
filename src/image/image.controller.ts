@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageService } from './image.service';
 import { RolesGuard } from '../auth/guard/role.guard';
 import { Control } from '../common/meta/control.meta';
@@ -10,6 +22,15 @@ import { UpdateImageDto } from './dto/update-image.dto';
 @UseGuards(RolesGuard)
 export class ImageController {
   constructor(private readonly imageService: ImageService) {}
+
+  @Post('upload')
+  @Description('Tải lên hình ảnh', [
+    { status: 201, description: 'Tải lên thành công' },
+  ])
+  @UseInterceptors(FileInterceptor('file'))
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
+    return this.imageService.uploadFile(file);
+  }
 
   @Post()
   @Description('Tạo mới hình ảnh', [
@@ -44,10 +65,8 @@ export class ImageController {
   }
 
   @Delete(':id')
-  @Description('Xóa hình ảnh', [
-    { status: 200, description: 'Xóa thành công' },
-  ])
+  @Description('Xóa hình ảnh', [{ status: 200, description: 'Xóa thành công' }])
   remove(@Param('id') id: string) {
     return this.imageService.remove(id);
   }
-} 
+}

@@ -1,4 +1,10 @@
-import { IsMongoId, IsString, IsNumber, Min, IsOptional } from 'class-validator';
+import {
+  IsMongoId,
+  IsString,
+  IsNumber,
+  Min,
+  IsOptional,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateProductDto {
@@ -32,4 +38,4 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   price: number;
-} 
+}
