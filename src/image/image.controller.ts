@@ -3,69 +3,107 @@ import {
   Get,
   Post,
   Body,
-  Put,
   Param,
   Delete,
-  UseGuards,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageService } from './image.service';
-import { RolesGuard } from '../auth/guard/role.guard';
-import { Control } from '../common/meta/control.meta';
-import { Description } from '../common/meta/description.meta';
 import { CreateImageDto } from './dto/create-image.dto';
-import { UpdateImageDto } from './dto/update-image.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiBody,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Image } from './schemas/image.schema';
 
-@Control('images')
-@UseGuards(RolesGuard)
+@ApiTags('Images')
+@Controller('images')
 export class ImageController {
   constructor(private readonly imageService: ImageService) {}
 
-  @Post('upload')
-  @Description('Tải lên hình ảnh', [
-    { status: 201, description: 'Tải lên thành công' },
-  ])
-  @UseInterceptors(FileInterceptor('file'))
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
-    return this.imageService.uploadFile(file);
-  }
-
   @Post()
-  @Description('Tạo mới hình ảnh', [
-    { status: 201, description: 'Tạo thành công' },
-  ])
-  create(@Body() createImageDto: CreateImageDto) {
-    return this.imageService.create(createImageDto);
+  @ApiOperation({ summary: 'Upload a new image' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Image upload with type',
+    type: CreateImageDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Image uploaded successfully',
+    type: Image,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid file type or size',
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  create(
+    @Body() createImageDto: CreateImageDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.imageService.create(createImageDto, file);
   }
 
   @Get()
-  @Description('Lấy danh sách hình ảnh', [
-    { status: 200, description: 'Thành công' },
-  ])
-  findAll() {
-    return this.imageService.findAll();
+  @ApiOperation({ summary: 'Get all images' })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Filter images by type',
+    enum: ['product', 'category', 'banner', 'avatar'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of images retrieved successfully',
+    type: [Image],
+  })
+  findAll(@Query('type') type?: string) {
+    return this.imageService.findAll(type);
   }
 
   @Get(':id')
-  @Description('Lấy thông tin hình ảnh', [
-    { status: 200, description: 'Thành công' },
-  ])
+  @ApiOperation({ summary: 'Get image by ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'Image ID',
+    example: '65f2d6e8c35e6c34f4112345',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Image found',
+    type: Image,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Image not found',
+  })
   findOne(@Param('id') id: string) {
     return this.imageService.findOne(id);
   }
 
-  @Put(':id')
-  @Description('Cập nhật hình ảnh', [
-    { status: 200, description: 'Cập nhật thành công' },
-  ])
-  update(@Param('id') id: string, @Body() updateImageDto: UpdateImageDto) {
-    return this.imageService.update(id, updateImageDto);
-  }
-
   @Delete(':id')
-  @Description('Xóa hình ảnh', [{ status: 200, description: 'Xóa thành công' }])
+  @ApiOperation({ summary: 'Delete image by ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'Image ID',
+    example: '65f2d6e8c35e6c34f4112345',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Image deleted successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Image not found',
+  })
   remove(@Param('id') id: string) {
     return this.imageService.remove(id);
   }

@@ -19,5 +19,6 @@ import { UsersModule } from '../users/users.module';
   ],
   controllers: [ImageController],
   providers: [ImageService],
+  exports: [ImageService],
 })
 export class ImageModule {} 

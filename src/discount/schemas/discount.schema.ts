@@ -22,7 +22,7 @@ export class Discount {
   desc: string;
 
   @Prop({ required: true, min: 0, max: 100 })
-  discount_precent: number;
+  discount_percent: number;
 
   @Prop({ required: true, index: true })
   time_start: Date;

@@ -1,11 +1,12 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable prettier/prettier */
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { Cart, CartDocument } from './schemas/cart.schema';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
 import { MessengeCode } from '../common/exception/MessengeCode';
-import { ProductsService } from 'src/products/products.service';
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class CartsService {
@@ -13,69 +14,175 @@ export class CartsService {
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     private readonly productsService: ProductsService,
   ) {}
- 
+
   async addToCart(userId: string, createCartDto: CreateCartDto) {
-    const product = await this.productsService.findById(createCartDto.id_product);
-    if (!product) {
-      throw MessengeCode.PRODUCT.NOT_FOUND;
+    try {
+      // Validate ObjectIds
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('ID người dùng không hợp lệ');
+      }
+      if (!isValidObjectId(createCartDto.id_product)) {
+        throw new BadRequestException('ID sản phẩm không hợp lệ');
+      }
+
+      // Validate quantity
+      if (createCartDto.quantity <= 0) {
+        throw new BadRequestException('Số lượng phải lớn hơn 0');
+      }
+
+      // Check if product exists
+      const product = await this.productsService.findById(createCartDto.id_product);
+      if (!product) {
+        throw new NotFoundException('Không tìm thấy sản phẩm');
+      }
+
+      // Check if item already exists in cart
+      const existingItem = await this.cartModel.findOne({
+        uid: new Types.ObjectId(userId),
+        id_product: new Types.ObjectId(createCartDto.id_product),
+      });
+
+      if (existingItem) {
+        // Update quantity of existing item
+        existingItem.quantity += createCartDto.quantity;
+        
+        // Validate updated quantity
+        if (existingItem.quantity <= 0) {
+          await this.cartModel.deleteOne({ _id: existingItem._id });
+          return { message: 'Đã xóa sản phẩm khỏi giỏ hàng' };
+        }
+
+        return await existingItem.save();
+      }
+
+      // Create new cart item
+      const newCartItem = new this.cartModel({
+        uid: new Types.ObjectId(userId),
+        id_product: new Types.ObjectId(createCartDto.id_product),
+        quantity: createCartDto.quantity,
+      });
+
+      return await newCartItem.save();
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể thêm vào giỏ hàng: ' + error.message);
     }
-
-    const existingItem = await this.cartModel.findOne({
-      uid: new Types.ObjectId(userId),
-      id_product: new Types.ObjectId(createCartDto.id_product),
-    });
-
-    if (existingItem) {
-      existingItem.quantity += createCartDto.quantity;
-      return await existingItem.save();
-    }
-
-    const newCartItem = new this.cartModel({
-      uid: new Types.ObjectId(userId),
-      id_product: new Types.ObjectId(createCartDto.id_product),
-      quantity: createCartDto.quantity,
-    });
-
-    return await newCartItem.save();
   }
 
   async getUserCart(userId: string) {
-    return await this.cartModel
-      .find({ uid: new Types.ObjectId(userId) })
-      .populate('id_product')
-      .exec();
+    try {
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('ID người dùng không hợp lệ');
+      }
+
+      const cartItems = await this.cartModel
+        .find({ uid: new Types.ObjectId(userId) })
+        .populate('id_product')
+        .exec();
+
+      if (!cartItems || cartItems.length === 0) {
+        return { message: 'Giỏ hàng trống' };
+      }
+
+      return cartItems;
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể lấy giỏ hàng: ' + error.message);
+    }
   }
 
   async updateCartItem(userId: string, cartItemId: string, updateCartDto: UpdateCartDto) {
-    const cartItem = await this.cartModel.findOneAndUpdate(
-      {
-        _id: new Types.ObjectId(cartItemId),
-        uid: new Types.ObjectId(userId),
-      },
-      { quantity: updateCartDto.quantity },
-      { new: true }
-    );
+    try {
+      // Validate ObjectIds
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('ID người dùng không hợp lệ');
+      }
+      if (!isValidObjectId(cartItemId)) {
+        throw new BadRequestException('ID giỏ hàng không hợp lệ');
+      }
 
-    if (!cartItem) {
-      throw MessengeCode.CART.ITEM_NOT_FOUND;
+      // Validate quantity
+      if (updateCartDto.quantity <= 0) {
+        // If quantity is 0 or negative, remove item from cart
+        await this.removeFromCart(userId, cartItemId);
+        return { message: 'Đã xóa sản phẩm khỏi giỏ hàng' };
+      }
+
+      // Update cart item
+      const cartItem = await this.cartModel.findOneAndUpdate(
+        {
+          _id: new Types.ObjectId(cartItemId),
+          uid: new Types.ObjectId(userId),
+        },
+        { quantity: updateCartDto.quantity },
+        { new: true },
+      );
+
+      if (!cartItem) {
+        throw new NotFoundException('Không tìm thấy sản phẩm trong giỏ hàng');
+      }
+
+      return cartItem;
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể cập nhật giỏ hàng: ' + error.message);
     }
-
-    return cartItem;
   }
 
   async removeFromCart(userId: string, cartItemId: string) {
-    const result = await this.cartModel.deleteOne({
-      _id: new Types.ObjectId(cartItemId),
-      uid: new Types.ObjectId(userId),
-    });
+    try {
+      // Validate ObjectIds
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('ID người dùng không hợp lệ');
+      }
+      if (!isValidObjectId(cartItemId)) {
+        throw new BadRequestException('ID giỏ hàng không hợp lệ');
+      }
 
-    if (result.deletedCount === 0) {
-      throw MessengeCode.CART.ITEM_NOT_FOUND;
+      const result = await this.cartModel.deleteOne({
+        _id: new Types.ObjectId(cartItemId),
+        uid: new Types.ObjectId(userId),
+      });
+
+      if (result.deletedCount === 0) {
+        throw new NotFoundException('Không tìm thấy sản phẩm trong giỏ hàng');
+      }
+
+      return { message: 'Đã xóa sản phẩm khỏi giỏ hàng' };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể xóa sản phẩm khỏi giỏ hàng: ' + error.message);
     }
+  }
 
-    return { message: 'Item removed from cart' };
-  }
   async clearCart(userId: string) {
-    return await this.cartModel.deleteMany({ uid: new Types.ObjectId(userId) });
+    try {
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('ID người dùng không hợp lệ');
+      }
+
+      const result = await this.cartModel.deleteMany({ 
+        uid: new Types.ObjectId(userId) 
+      });
+
+      if (result.deletedCount === 0) {
+        return { message: 'Giỏ hàng đã trống' };
+      }
+
+      return { message: 'Đã xóa tất cả sản phẩm khỏi giỏ hàng' };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể xóa giỏ hàng: ' + error.message);
+    }
   }
-} 
+}

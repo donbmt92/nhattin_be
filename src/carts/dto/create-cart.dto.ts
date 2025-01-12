@@ -2,6 +2,10 @@ import { IsMongoId, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCartDto {
+  @ApiProperty({ description: 'User ID' })
+  @IsMongoId()
+  id_user: string;
+
   @ApiProperty({ description: 'Product ID' })
   @IsMongoId()
   id_product: string;

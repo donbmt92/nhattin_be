@@ -1,14 +1,22 @@
-import { Injectable } from '@nestjs/common';
-import { existsSync, mkdirSync } from 'fs';
-import { extname } from 'path';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as sharp from 'sharp';
 
-type MulterFile = Express.Multer.File;
+interface UploadResult {
+  originalName: string;
+  fileName: string;
+  filePath: string;
+  thumbnailPath?: string;
+  fileSize: number;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
 
 @Injectable()
 export class UploadService {
-  private readonly uploadDir = './uploads';
-  private readonly allowedMimeTypes = [
+  private readonly allowedImageTypes = [
     'image/jpeg',
     'image/png',
     'image/gif',
@@ -16,80 +24,182 @@ export class UploadService {
   ];
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB
 
-  constructor() {
-    // Tạo thư mục uploads nếu chưa tồn tại
-    if (!existsSync(this.uploadDir)) {
-      mkdirSync(this.uploadDir, { recursive: true });
+  private validateFile(
+    file: Express.Multer.File,
+    options?: {
+      allowedTypes?: string[];
+      maxSize?: number;
+    },
+  ): void {
+    if (!file) {
+      throw new BadRequestException('Không có file được tải lên');
+    }
+
+    const allowedTypes = options?.allowedTypes || this.allowedImageTypes;
+    const maxSize = options?.maxSize || this.maxFileSize;
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Loại file không được hỗ trợ');
+    }
+
+    if (file.size > maxSize) {
+      throw new BadRequestException(
+        `Kích thước file không được vượt quá ${maxSize / 1024 / 1024}MB`,
+      );
     }
   }
 
-  async uploadImage(file: MulterFile) {
+  private async createDirectory(folder: string): Promise<string> {
+    const uploadDir = path.join('uploads', folder);
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    return uploadDir;
+  }
+
+  private generateFileName(file: Express.Multer.File): string {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    return `${uniqueSuffix}${ext}`;
+  }
+
+  async saveFile(
+    file: Express.Multer.File,
+    folder: string = 'uploads',
+    options?: {
+      allowedTypes?: string[];
+      maxSize?: number;
+      generateThumbnail?: boolean;
+      resize?: { width?: number; height?: number };
+      quality?: number;
+    },
+  ): Promise<UploadResult> {
     try {
       // Validate file
-      await this.validateFile(file);
+      this.validateFile(file, {
+        allowedTypes: options?.allowedTypes,
+        maxSize: options?.maxSize,
+      });
 
-      // Tạo tên file unique
+      // Create directory
+      const uploadDir = await this.createDirectory(folder);
+
+      // Generate filenames
       const fileName = this.generateFileName(file);
-      const filePath = `${this.uploadDir}/${fileName}`;
+      const filePath = path.join(uploadDir, fileName);
 
-      // Optimize và lưu ảnh
-      await this.optimizeAndSaveImage(file.buffer, filePath);
+      let width: number;
+      let height: number;
 
-      // Tạo thumbnail
-      const thumbnailPath = `${this.uploadDir}/thumb_${fileName}`;
-      await this.createThumbnail(file.buffer, thumbnailPath);
+      // Process image if it's an image file
+      if (this.allowedImageTypes.includes(file.mimetype)) {
+        const image = sharp(file.buffer);
+        const metadata = await image.metadata();
 
+        // Resize if specified
+        if (options?.resize) {
+          const { width: targetWidth, height: targetHeight } = options.resize;
+          await image
+            .resize(targetWidth, targetHeight, {
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+            .jpeg({ quality: options?.quality || 80 })
+            .toFile(filePath);
+
+          const resizedMetadata = await sharp(filePath).metadata();
+          width = resizedMetadata.width;
+          height = resizedMetadata.height;
+        } else {
+          // Save original with compression
+          await image
+            .jpeg({ quality: options?.quality || 80 })
+            .toFile(filePath);
+          width = metadata.width;
+          height = metadata.height;
+        }
+
+        // Generate thumbnail if requested
+        let thumbnailPath: string;
+        if (options?.generateThumbnail) {
+          const thumbFileName = `thumb_${fileName}`;
+          thumbnailPath = path.join(uploadDir, thumbFileName);
+          await image
+            .resize(300, 300, {
+              fit: 'cover',
+              position: 'center',
+            })
+            .jpeg({ quality: 70 })
+            .toFile(thumbnailPath);
+          thumbnailPath = thumbnailPath.replace(/\\/g, '/');
+        }
+
+        return {
+          originalName: file.originalname,
+          fileName,
+          filePath: filePath.replace(/\\/g, '/'),
+          thumbnailPath,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          width,
+          height,
+        };
+      }
+
+      // For non-image files
+      fs.writeFileSync(filePath, file.buffer);
       return {
         originalName: file.originalname,
-        fileName: fileName,
-        filePath: filePath.replace('./', ''),
-        thumbnailPath: thumbnailPath.replace('./', ''),
+        fileName,
+        filePath: filePath.replace(/\\/g, '/'),
         fileSize: file.size,
         mimeType: file.mimetype,
       };
     } catch (error) {
-      throw new Error(`Upload failed: ${error.message}`);
+      throw new BadRequestException('Không thể lưu file: ' + error.message);
     }
   }
 
-  private async validateFile(file: MulterFile) {
-    if (!file) {
-      throw new Error('No file uploaded');
-    }
+  async deleteFile(filepath: string): Promise<void> {
+    try {
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
 
-    if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new Error('Invalid file type. Only images are allowed');
-    }
-
-    if (file.size > this.maxFileSize) {
-      throw new Error('File size too large. Maximum size is 5MB');
+        // Delete thumbnail if exists
+        const dir = path.dirname(filepath);
+        const filename = path.basename(filepath);
+        const thumbnailPath = path.join(dir, `thumb_${filename}`);
+        if (fs.existsSync(thumbnailPath)) {
+          fs.unlinkSync(thumbnailPath);
+        }
+      }
+    } catch (error) {
+      throw new BadRequestException('Không thể xóa file: ' + error.message);
     }
   }
 
-  private generateFileName(file: MulterFile): string {
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const ext = extname(file.originalname);
-    return `${timestamp}-${randomString}${ext}`;
-  }
+  async updateFile(
+    oldFilepath: string,
+    newFile: Express.Multer.File,
+    folder: string = 'uploads',
+    options?: {
+      allowedTypes?: string[];
+      maxSize?: number;
+      generateThumbnail?: boolean;
+      resize?: { width?: number; height?: number };
+      quality?: number;
+    },
+  ): Promise<UploadResult> {
+    try {
+      // Delete old file
+      await this.deleteFile(oldFilepath);
 
-  private async optimizeAndSaveImage(buffer: Buffer, filePath: string) {
-    await sharp(buffer)
-      .resize(1920, 1080, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .jpeg({ quality: 80 })
-      .toFile(filePath);
-  }
-
-  private async createThumbnail(buffer: Buffer, thumbnailPath: string) {
-    await sharp(buffer)
-      .resize(300, 300, {
-        fit: 'cover',
-        position: 'center',
-      })
-      .jpeg({ quality: 70 })
-      .toFile(thumbnailPath);
+      // Save new file
+      return await this.saveFile(newFile, folder, options);
+    } catch (error) {
+      throw new BadRequestException(
+        'Không thể cập nhật file: ' + error.message,
+      );
+    }
   }
 }

@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable prettier/prettier */
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Inventory, InventoryDocument } from './schemas/inventory.schema';
+import { InventoryLog, InventoryLogDocument } from './schemas/inventory-log.schema';
 import { CreateInventoryDto } from './dto/create-inventory.dto';
 import { UpdateInventoryDto } from './dto/update-inventory.dto';
 import { MessengeCode } from '../common/exception/MessengeCode';
@@ -13,6 +15,7 @@ import { InventoryModel } from './model/inventory.model';
 export class InventoryService {
   constructor(
     @InjectModel(Inventory.name) private inventoryModel: Model<InventoryDocument>,
+    @InjectModel(InventoryLog.name) private inventoryLogModel: Model<InventoryLogDocument>,
     private readonly warehousesService: WarehousesService,
     private readonly productsService: ProductsService,
   ) {}
@@ -77,7 +80,7 @@ export class InventoryService {
       .findByIdAndUpdate(
         new Types.ObjectId(id),
         { quantity: updateInventoryDto.quantity },
-        { new: true }
+        { new: true },
       )
       .exec();
 
@@ -108,4 +111,31 @@ export class InventoryService {
     const totalStock = inventories.reduce((sum, inv) => sum + inv.quantity, 0);
     return totalStock >= quantity;
   }
-} 
+
+  async checkAndReduceInventory(productId: Types.ObjectId, quantity: number): Promise<void> {
+    const inventory = await this.inventoryModel.findOne({ id_product: productId });
+    
+    if (!inventory) {
+      throw new BadRequestException('Không tìm thấy thông tin tồn kho của sản phẩm');
+    }
+
+    if (inventory.quantity < quantity) {
+      throw new BadRequestException('Số lượng sản phẩm trong kho không đủ');
+    }
+
+    // Reduce inventory
+    inventory.quantity -= quantity;
+    await inventory.save();
+
+    // Create inventory log
+    const log = new this.inventoryLogModel({
+      id_inventory: inventory._id,
+      quantity: -quantity,
+      transaction_type: 'order',
+      note: 'Giảm tồn kho do đặt hàng',
+      transaction_date: new Date()
+    });
+
+    await log.save();
+  }
+}

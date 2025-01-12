@@ -16,7 +16,10 @@ import { Roles } from '../common/meta/role.meta';
 import { UserRole } from '../users/enum/role.enum';
 import { CreateDiscountDto } from './dto/create-discount.dto/create-discount.dto';
 import { UpdateDiscountDto } from './dto/update-discount.dto/update-discount.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Discounts')
+@ApiBearerAuth()
 @Control('discounts')
 @UseGuards(RolesGuard)
 export class DiscountController {
@@ -24,6 +27,9 @@ export class DiscountController {
 
   @Post()
   @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Tạo mới khuyến mãi' })
+  @ApiResponse({ status: 201, description: 'Tạo thành công' })
+  @ApiResponse({ status: 400, description: 'Khuyến mãi đã tồn tại' })
   @Description('Tạo mới khuyến mãi', [
     { status: 201, description: 'Tạo thành công' },
     { status: 400, description: 'Khuyến mãi đã tồn tại' },
@@ -33,6 +39,8 @@ export class DiscountController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Lấy danh sách khuyến mãi' })
+  @ApiResponse({ status: 200, description: 'Thành công' })
   @Description('Lấy danh sách khuyến mãi', [
     { status: 200, description: 'Thành công' },
   ])
@@ -41,6 +49,8 @@ export class DiscountController {
   }
 
   @Get('active')
+  @ApiOperation({ summary: 'Lấy danh sách khuyến mãi đang hoạt động' })
+  @ApiResponse({ status: 200, description: 'Thành công' })
   @Description('Lấy danh sách khuyến mãi đang hoạt động', [
     { status: 200, description: 'Thành công' },
   ])
@@ -49,6 +59,9 @@ export class DiscountController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Lấy thông tin khuyến mãi' })
+  @ApiResponse({ status: 200, description: 'Thành công' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khuyến mãi' })
   @Description('Lấy thông tin khuyến mãi', [
     { status: 200, description: 'Thành công' },
     { status: 404, description: 'Không tìm thấy khuyến mãi' },
@@ -59,6 +72,9 @@ export class DiscountController {
 
   @Put(':id')
   @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Cập nhật khuyến mãi' })
+  @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khuyến mãi' })
   @Description('Cập nhật khuyến mãi', [
     { status: 200, description: 'Cập nhật thành công' },
     { status: 404, description: 'Không tìm thấy khuyến mãi' },
@@ -72,6 +88,9 @@ export class DiscountController {
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Xóa khuyến mãi' })
+  @ApiResponse({ status: 200, description: 'Xóa thành công' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khuyến mãi' })
   @Description('Xóa khuyến mãi', [
     { status: 200, description: 'Xóa thành công' },
     { status: 404, description: 'Không tìm thấy khuyến mãi' },
