@@ -15,6 +15,7 @@ export class UsersService {
     }
 
     async findOne(username: string) {
+        console.log('username', username);
         return await this._usersRepo.findByPhone(username);
     }
     

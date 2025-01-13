@@ -1,104 +1,162 @@
 /* eslint-disable prettier/prettier */
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { User } from '../common/meta/user.meta';
+import { CartsService } from './carts.service';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
-import { RolesGuard } from '../auth/guard/role.guard';
-import { CartsService } from './carts.service';
-import { User } from '../common/meta/user.meta';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { Cart } from './schemas/cart.schema';
+
+const CART_RESPONSE = {
+  type: 'object',
+  properties: {
+    _id: {
+      type: 'string',
+      description: 'ID của item trong giỏ hàng',
+      example: '65f2e0a3a2e0c60c848d3e12'
+    },
+    uid: {
+      type: 'string', 
+      description: 'ID của người dùng',
+      example: '65f2e0a3a2e0c60c848d3e13'
+    },
+    id_product: {
+      type: 'string',
+      description: 'ID của sản phẩm',
+      example: '65f2e0a3a2e0c60c848d3e14'
+    },
+    quantity: {
+      type: 'number',
+      description: 'Số lượng sản phẩm',
+      minimum: 1,
+      example: 1
+    }
+  }
+};
 
 @ApiTags('Carts')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @Controller('carts')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Thêm sản phẩm vào giỏ hàng' })
+  @ApiOperation({ 
+    summary: 'Thêm sản phẩm vào giỏ hàng',
+    description: 'Thêm một sản phẩm mới vào giỏ hàng hoặc cập nhật số lượng nếu sản phẩm đã tồn tại'
+  })
+  @ApiBody({
+    type: CreateCartDto,
+    description: 'Thông tin sản phẩm thêm vào giỏ hàng',
+    examples: {
+      example1: {
+        value: {
+          id_product: "6783986205306e7b3a633bdb",
+          quantity: 1
+        },
+        summary: "Thêm sản phẩm vào giỏ hàng"
+      }
+    }
+  })
   @ApiResponse({
     status: 201,
-    description: 'Thêm sản phẩm vào giỏ hàng thành công',
-    type: Cart
+    description: 'Thêm vào giỏ hàng thành công',
+    schema: CART_RESPONSE
   })
   @ApiResponse({
     status: 400,
-    description: 'Dữ liệu không hợp lệ hoặc số lượng không đủ'
+    description: 'Lỗi khi thêm vào giỏ hàng:\n' +
+      '- ID sản phẩm không hợp lệ\n' +
+      '- Số lượng phải lớn hơn 0'
   })
   @ApiResponse({
     status: 401,
-    description: 'Không có quyền truy cập'
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
   })
-  async addToCart(
-    @User() userId: string,
-    @Body() createCartDto: CreateCartDto,
-  ) {
-    return await this.cartsService.addToCart(userId, createCartDto);
+  @ApiResponse({
+    status: 404,
+    description: 'Không tìm thấy sản phẩm'
+  })
+  addToCart(@User('_id') userId: string, @Body() createCartDto: CreateCartDto) {
+    return this.cartsService.addToCart(userId, createCartDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lấy thông tin giỏ hàng của người dùng' })
+  @ApiOperation({ 
+    summary: 'Xem giỏ hàng của người dùng',
+    description: 'Lấy danh sách các sản phẩm trong giỏ hàng của người dùng hiện tại'
+  })
   @ApiResponse({
     status: 200,
-    description: 'Lấy thông tin giỏ hàng thành công',
-    type: [Cart]
+    description: 'Danh sách sản phẩm trong giỏ hàng',
+    schema: {
+      type: 'array',
+      items: CART_RESPONSE
+    }
   })
   @ApiResponse({
     status: 401,
-    description: 'Không có quyền truy cập'
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
   })
-  async getUserCart(@User() userId: string) {
-    return await this.cartsService.getUserCart(userId);
+  getUserCart(@User('_id') userId: string) {
+    return this.cartsService.getUserCart(userId);
   }
 
-  @Put(':id')
-  @ApiOperation({ summary: 'Cập nhật số lượng sản phẩm trong giỏ hàng' })
+  @Patch(':id')
+  @ApiOperation({ 
+    summary: 'Cập nhật số lượng sản phẩm trong giỏ hàng',
+    description: 'Cập nhật số lượng của một sản phẩm trong giỏ hàng. Nếu số lượng <= 0, sản phẩm sẽ bị xóa khỏi giỏ hàng'
+  })
   @ApiParam({
     name: 'id',
     description: 'ID của item trong giỏ hàng',
     type: 'string'
   })
+  @ApiBody({
+    type: UpdateCartDto,
+    description: 'Số lượng mới của sản phẩm',
+    examples: {
+      example1: {
+        value: {
+          quantity: 2
+        },
+        summary: "Cập nhật số lượng sản phẩm"
+      }
+    }
+  })
   @ApiResponse({
     status: 200,
-    description: 'Cập nhật số lượng thành công',
-    type: Cart
+    description: 'Cập nhật giỏ hàng thành công',
+    schema: CART_RESPONSE
   })
   @ApiResponse({
     status: 400,
-    description: 'Dữ liệu không hợp lệ hoặc số lượng không đủ'
+    description: 'Lỗi khi cập nhật giỏ hàng:\n' +
+      '- ID giỏ hàng không hợp lệ\n' +
+      '- Số lượng không hợp lệ'
   })
   @ApiResponse({
     status: 401,
-    description: 'Không có quyền truy cập'
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
   })
   @ApiResponse({
     status: 404,
     description: 'Không tìm thấy sản phẩm trong giỏ hàng'
   })
-  async updateCartItem(
-    @User() userId: string,
+  updateCartItem(
+    @User('_id') userId: string,
     @Param('id') cartItemId: string,
     @Body() updateCartDto: UpdateCartDto,
   ) {
-    return await this.cartsService.updateCartItem(
-      userId,
-      cartItemId,
-      updateCartDto,
-    );
+    return this.cartsService.updateCartItem(userId, cartItemId, updateCartDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Xóa sản phẩm khỏi giỏ hàng' })
+  @ApiOperation({ 
+    summary: 'Xóa sản phẩm khỏi giỏ hàng',
+    description: 'Xóa một sản phẩm khỏi giỏ hàng của người dùng'
+  })
   @ApiParam({
     name: 'id',
     description: 'ID của item trong giỏ hàng',
@@ -106,34 +164,42 @@ export class CartsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Xóa sản phẩm thành công'
+    description: 'Xóa sản phẩm khỏi giỏ hàng thành công'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'ID giỏ hàng không hợp lệ'
   })
   @ApiResponse({
     status: 401,
-    description: 'Không có quyền truy cập'
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
   })
   @ApiResponse({
     status: 404,
     description: 'Không tìm thấy sản phẩm trong giỏ hàng'
   })
-  async removeFromCart(
-    @User() userId: string,
-    @Param('id') cartItemId: string,
-  ) {
-    return await this.cartsService.removeFromCart(userId, cartItemId);
+  removeFromCart(@User('_id') userId: string, @Param('id') cartItemId: string) {
+    return this.cartsService.removeFromCart(userId, cartItemId);
   }
 
   @Delete()
-  @ApiOperation({ summary: 'Xóa toàn bộ giỏ hàng' })
+  @ApiOperation({ 
+    summary: 'Xóa toàn bộ giỏ hàng',
+    description: 'Xóa tất cả sản phẩm trong giỏ hàng của người dùng'
+  })
   @ApiResponse({
     status: 200,
     description: 'Xóa giỏ hàng thành công'
   })
   @ApiResponse({
-    status: 401,
-    description: 'Không có quyền truy cập'
+    status: 400,
+    description: 'ID người dùng không hợp lệ'
   })
-  async clearCart(@User() userId: string) {
-    return await this.cartsService.clearCart(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
+  })
+  clearCart(@User('_id') userId: string) {
+    return this.cartsService.clearCart(userId);
   }
 }

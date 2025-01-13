@@ -15,7 +15,6 @@ export class OrderItem {
   @Prop({ required: true, min: 1 })
   quantity: number;
 
-  @Prop({ required: true })
   old_price: number;
 
   @Prop({ default: 0 })

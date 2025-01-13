@@ -3,12 +3,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Page, PageSchema } from './schemas/page.schema';
 import { PagesService } from './pages.service';
 import { PagesController } from './pages.controller';
-import { UsersModule } from 'src/users/users.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Page.name, schema: PageSchema }]),
-    UsersModule
+    AuthModule
   ],
   controllers: [PagesController],
   providers: [PagesService],

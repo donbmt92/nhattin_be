@@ -1,14 +1,17 @@
+/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Discount, DiscountSchema } from './schemas/discount.schema';
 import { DiscountController } from './discount.controller';
 import { DiscountService } from './discount.service';
-import { UsersModule } from '../users/users.module';
+import { Discount, DiscountSchema } from './schemas/discount.schema';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Discount.name, schema: DiscountSchema }]),
-    UsersModule
+    MongooseModule.forFeature([
+      { name: Discount.name, schema: DiscountSchema }
+    ]),
+    AuthModule
   ],
   controllers: [DiscountController],
   providers: [DiscountService],
