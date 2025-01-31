@@ -15,18 +15,24 @@ import { CategoryModule } from './category/category.module';
 import { ImageModule } from './image/image.module';
 import { NavigationModule } from './navigation/navigation.module';
 import { PagesModule } from './pages/pages.module';
+import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 const ENV = process.env.NODE_ENV;
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads/'
+    }),
     ConfigModule.forRoot({ envFilePath: !ENV ? '.env' : `.env.${ENV}` }),
     MongooseModule.forRoot(process.env.MONGOURL, {
       dbName: process.env.DATABASE,
       connectionFactory: (connection) => {
         console.log(`Connected to database: ${process.env.DATABASE}`);
         return connection;
-      },
+      }
     }),
     AuthModule,
     UsersModule,
@@ -41,9 +47,9 @@ const ENV = process.env.NODE_ENV;
     CategoryModule,
     ImageModule,
     NavigationModule,
-    PagesModule,
+    PagesModule
   ],
   controllers: [],
-  providers: [],
+  providers: []
 })
 export class AppModule {}

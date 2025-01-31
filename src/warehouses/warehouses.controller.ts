@@ -26,7 +26,7 @@ export class WarehousesController {
   @Roles(UserRole.ADMIN)
   @Description('Tạo mới kho', [
     { status: 201, description: 'Tạo thành công' },
-    { status: 400, description: 'Kho đã tồn tại' },
+    { status: 400, description: 'Kho đã tồn tại' }
   ])
   create(@Body() createWarehouseDto: CreateWarehouseDto) {
     return this.warehousesService.create(createWarehouseDto);
@@ -34,7 +34,7 @@ export class WarehousesController {
 
   @Get()
   @Description('Lấy danh sách kho', [
-    { status: 200, description: 'Thành công' },
+    { status: 200, description: 'Thành công' }
   ])
   findAll() {
     return this.warehousesService.findAll();
@@ -43,7 +43,7 @@ export class WarehousesController {
   @Get(':id')
   @Description('Lấy thông tin kho', [
     { status: 200, description: 'Thành công' },
-    { status: 404, description: 'Không tìm thấy kho' },
+    { status: 404, description: 'Không tìm thấy kho' }
   ])
   findOne(@Param('id') id: string) {
     return this.warehousesService.findOne(id);
@@ -53,9 +53,12 @@ export class WarehousesController {
   @Roles(UserRole.ADMIN)
   @Description('Cập nhật kho', [
     { status: 200, description: 'Cập nhật thành công' },
-    { status: 404, description: 'Không tìm thấy kho' },
+    { status: 404, description: 'Không tìm thấy kho' }
   ])
-  update(@Param('id') id: string, @Body() updateWarehouseDto: UpdateWarehouseDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateWarehouseDto: UpdateWarehouseDto
+  ) {
     return this.warehousesService.update(id, updateWarehouseDto);
   }
 
@@ -63,9 +66,9 @@ export class WarehousesController {
   @Roles(UserRole.ADMIN)
   @Description('Xóa kho', [
     { status: 200, description: 'Xóa thành công' },
-    { status: 404, description: 'Không tìm thấy kho' },
+    { status: 404, description: 'Không tìm thấy kho' }
   ])
   remove(@Param('id') id: string) {
     return this.warehousesService.remove(id);
   }
-} 
+}

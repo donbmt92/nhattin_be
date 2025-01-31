@@ -19,8 +19,8 @@ export class AuthController {
     examples: {
       user: {
         value: {
-          phone: "0379135103",
-          password: "password123"
+          email: "user@example.com",
+          password: "string"
         },
         summary: "Thông tin đăng nhập"
       }
@@ -43,10 +43,10 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Đăng nhập thất bại:\n' +
-      '- Số điện thoại không tồn tại\n' +
+      '- Email không tồn tại\n' +
       '- Mật khẩu không đúng'
   })
   async signIn(@Body() signInDto: SignInDto) {
-    return await this.authService.signIn(signInDto.phone, signInDto.password);
+    return await this.authService.signIn(signInDto.email, signInDto.password);
   }
 }

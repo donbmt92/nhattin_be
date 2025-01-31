@@ -1,18 +1,15 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length, Matches } from 'class-validator';
+import { IsString, Length, IsEmail } from 'class-validator';
 
 export class SignInDto {
   @ApiProperty({
-    description: 'Số điện thoại đăng nhập',
-    example: '0379135103',
-    minLength: 10,
-    maxLength: 10
+    description: 'Email đăng nhập',
+    example: 'user@example.com'
   })
   @IsString()
-  @Length(10, 10, { message: 'Số điện thoại phải có 10 số' })
-  @Matches(/^0[0-9]{9}$/, { message: 'Số điện thoại không hợp lệ' })
-  phone: string;
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  email: string;
 
   @ApiProperty({
     description: 'Mật khẩu đăng nhập',

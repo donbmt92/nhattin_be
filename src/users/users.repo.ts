@@ -16,16 +16,18 @@ export class UsersRepo {
   }
 
   async findByPhone(phone: string): Promise<UserDocument> {
-    console.log('phone', phone);
-    
     return await this._userModel.findOne({ phone: phone });
   }
 
-  async addJWTUser(phone: string, jwt: string) {
+  async findByEmail(email: string): Promise<UserDocument> {
+    return await this._userModel.findOne({ email: email });
+  }
+
+  async addJWTUser(identifier: string, jwt: string) {
     const updatedUser = await this._userModel.findOneAndUpdate(
-      { phone },
-      { $set: { jwt: jwt } }, // Sử dụng $set để cập nhật mảng jwt
-      { new: true } // Trả về bản ghi đã được cập nhật
+      { $or: [{ phone: identifier }, { email: identifier }] },
+      { $set: { jwt: jwt } },
+      { new: true }
     );
 
     return updatedUser;

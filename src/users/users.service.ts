@@ -14,24 +14,31 @@ export class UsersService {
         this._usersRepo = usersRepo;
     }
 
-    async findOne(username: string) {
-        console.log('username', username);
-        return await this._usersRepo.findByPhone(username);
+    async findOne(identifier: string) {
+        const user = await this._usersRepo.findByPhone(identifier) || await this._usersRepo.findByEmail(identifier);
+        return user;
     }
     
     async createUser(createUserDto: CreateUserDto){
-        const user = await this._usersRepo.findByPhone(createUserDto.phone);
-        if(user) {
+        const existingPhone = await this._usersRepo.findByPhone(createUserDto.phone);
+        if(existingPhone) {
             throw MessengeCode.USER.PHONE_IS_EXIST;
         }
+
+        const existingEmail = await this._usersRepo.findByEmail(createUserDto.email);
+        if(existingEmail) {
+            throw MessengeCode.USER.EMAIL_IS_EXIST;
+        }
+
         let data = {
-                _id: StringUtils.generateObjectId(),
-                fullName: createUserDto.fullName,
-                phone: createUserDto.phone,
-                password: createUserDto.password,
-                role: createUserDto.role,
-                isDelete: createUserDto.isDelete
-            }
+            _id: StringUtils.generateObjectId(),
+            fullName: createUserDto.fullName,
+            phone: createUserDto.phone,
+            email: createUserDto.email,
+            password: createUserDto.password,
+            role: createUserDto.role,
+            isDelete: createUserDto.isDelete
+        }
         return await this._usersRepo.createUser(data);
     }
 
@@ -40,11 +47,17 @@ export class UsersService {
         return new UserModel(data);
     }
 
-    async addJWTUser(phone: string, jwt: string){
-        return await this._usersRepo.addJWTUser(phone, jwt);
+    async findByEmail(email: string): Promise<any>{
+        const data = await this._usersRepo.findByEmail(email);
+        return new UserModel(data);
     }
 
-    async getUserByJWT(phone: string){
+
+    async addJWTUser(identifier: string, jwt: string){
+        return await this._usersRepo.addJWTUser(identifier, jwt);
+    }
+
+    async getUserByJWT(identifier: string){
         
     }
 }

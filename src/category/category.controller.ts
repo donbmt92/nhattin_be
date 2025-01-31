@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Query } from '@nestjs/common';
+/* eslint-disable prettier/prettier */
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
+  UseGuards,
+  Query
+} from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -17,7 +28,7 @@ export class CategoryController {
   @Roles(UserRole.ADMIN)
   @Description('Tạo mới danh mục', [
     { status: 201, description: 'Tạo thành công' },
-    { status: 400, description: 'Danh mục đã tồn tại' },
+    { status: 400, description: 'Danh mục đã tồn tại' }
   ])
   create(@Body() createCategoryDto: CreateCategoryDto) {
     return this.categoryService.create(createCategoryDto);
@@ -25,7 +36,7 @@ export class CategoryController {
 
   @Get()
   @Description('Lấy danh sách danh mục', [
-    { status: 200, description: 'Thành công' },
+    { status: 200, description: 'Thành công' }
   ])
   findAll(@Query('type') type?: string) {
     if (type) {
@@ -37,7 +48,7 @@ export class CategoryController {
   @Get(':id')
   @Description('Lấy thông tin danh mục', [
     { status: 200, description: 'Thành công' },
-    { status: 404, description: 'Không tìm thấy danh mục' },
+    { status: 404, description: 'Không tìm thấy danh mục' }
   ])
   findOne(@Param('id') id: string) {
     return this.categoryService.findOne(id);
@@ -47,9 +58,12 @@ export class CategoryController {
   @Roles(UserRole.ADMIN)
   @Description('Cập nhật danh mục', [
     { status: 200, description: 'Cập nhật thành công' },
-    { status: 404, description: 'Không tìm thấy danh mục' },
+    { status: 404, description: 'Không tìm thấy danh mục' }
   ])
-  update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateCategoryDto: UpdateCategoryDto
+  ) {
     return this.categoryService.update(id, updateCategoryDto);
   }
 
@@ -57,9 +71,11 @@ export class CategoryController {
   @Roles(UserRole.ADMIN)
   @Description('Xóa danh mục', [
     { status: 200, description: 'Xóa thành công' },
-    { status: 404, description: 'Không tìm thấy danh mục' },
+    { status: 400, description: 'Danh mục đã tồn tại' },
+    { status: 404, description: 'Không tìm thấy danh mục' }
   ])
   remove(@Param('id') id: string) {
+    console.log('id', id);
     return this.categoryService.remove(id);
   }
-} 
+}
