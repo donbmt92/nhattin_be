@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,6 +15,9 @@ async function bootstrap() {
     whitelist: true,
     forbidNonWhitelisted: true,
   }));
+
+  // Remove global JWT guard if it exists
+  // app.useGlobalGuards(new JwtAuthGuard());
 
   // Swagger configuration
   const config = new DocumentBuilder()
@@ -41,5 +45,6 @@ async function bootstrap() {
   });
 
   await app.listen(3080);
+  console.log('Application is running on: http://localhost:3080');
 }
 bootstrap();

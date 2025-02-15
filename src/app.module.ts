@@ -17,6 +17,8 @@ import { NavigationModule } from './navigation/navigation.module';
 import { PagesModule } from './pages/pages.module';
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 const ENV = process.env.NODE_ENV;
 
@@ -50,6 +52,11 @@ const ENV = process.env.NODE_ENV;
     PagesModule
   ],
   controllers: [],
-  providers: []
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard
+    }
+  ]
 })
 export class AppModule {}

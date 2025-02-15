@@ -4,19 +4,19 @@ import {
   IsNumber,
   Min,
   IsOptional,
-  Length,
+  Length
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateProductDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'ID của danh mục',
     example: '65abc123def456'
   })
   @IsMongoId()
   id_category: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'ID của khuyến mãi',
     example: '65abc123def456',
     required: false
@@ -25,7 +25,7 @@ export class CreateProductDto {
   @IsOptional()
   id_discount?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'ID của kho hàng',
     example: '65abc123def456',
     required: false
@@ -34,7 +34,7 @@ export class CreateProductDto {
   @IsOptional()
   id_inventory?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Tên sản phẩm',
     example: 'Áo thun nam',
     minLength: 3,
@@ -44,7 +44,7 @@ export class CreateProductDto {
   @Length(3, 100)
   name: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: 'string',
     format: 'binary',
     description: 'File ảnh sản phẩm (jpg, png, jpeg)',
@@ -53,14 +53,14 @@ export class CreateProductDto {
   @IsOptional()
   image: any;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Mô tả sản phẩm',
     example: 'Áo thun nam cotton 100%, form regular fit'
   })
   @IsString()
   desc: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Giá sản phẩm (VND)',
     example: 199000,
     minimum: 0

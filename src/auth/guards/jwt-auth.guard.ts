@@ -21,11 +21,23 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
-    // Log token from request header
+    // Skip JWT check for GET methods
     const request = context.switchToHttp().getRequest();
+    if (request.method === 'GET') {
+      console.log('GET method - Skipping JWT check');
+      return true;
+    }
+
+    // Check for roles decorator
+    const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());
+    if (!requiredRoles || requiredRoles.length === 0) {
+      console.log('No roles required - Skipping JWT check');
+      return true;
+    }
+
+    // Log token from request header
     const token = request.headers.authorization;
-    console.log('Request Headers:', request.headers);
-    console.log('Authorization Token:', token);
+    console.log('Authorization Header:', token);
 
     return super.canActivate(context);
   }
@@ -34,6 +46,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     console.log('JWT Auth Result:', { error: err, user: user });
     
     if (err || !user) {
+      console.log('JWT Auth Failed:', err);
       throw err || new UnauthorizedException('Xác thực thất bại - Token không hợp lệ hoặc đã hết hạn');
     }
     return user;

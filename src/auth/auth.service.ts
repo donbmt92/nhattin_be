@@ -23,7 +23,14 @@ export class AuthService {
       throw MessengeCode.USER.PASSWORD_WRONG;
     }
 
-    const payload = { sub: user._id, email: user.email };
+    const payload = {
+      sub: user._id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      username: user.phone // thêm username để tương thích với role.guard
+    };
+    console.log('Creating JWT with payload:', payload);
     const token = await this._jwtService.signAsync(payload);
     this._userService.addJWTUser(email, token);
     return {

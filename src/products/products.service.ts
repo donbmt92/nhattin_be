@@ -209,7 +209,7 @@ export class ProductsService {
       if (file) {
         // Save new image
         const savedImage = await this.imageService.create(
-          { type: 'product' } as CreateImageDto,  
+          { type: 'product' } as CreateImageDto,
           file
         );
         imagePath = savedImage.link;
@@ -261,6 +261,7 @@ export class ProductsService {
 
   async remove(id: string): Promise<ProductModel> {
     try {
+      
       if (!isValidObjectId(id)) {
         throw new BadRequestException('ID sản phẩm không hợp lệ');
       }
@@ -277,15 +278,10 @@ export class ProductsService {
       const deletedProduct = await this.productModel
         .findByIdAndDelete(new Types.ObjectId(id))
         .exec();
-
+      
       return ProductModel.fromEntity(deletedProduct);
     } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
+      console.log('Không thể xóa sản phẩm: ' + error);
       throw new BadRequestException('Không thể xóa sản phẩm: ' + error.message);
     }
   }

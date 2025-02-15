@@ -16,10 +16,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: any) {
-    console.log('JWT Payload:', payload);
+    // console.log('JWT Payload:', payload);
     
     let user = await this.usersService.findOne(payload.sub);
-    console.log('Found User:', user);
+    // console.log('Found User:', user);
     
     if (!user) {
         user = await this.usersService.findOne(payload.username);
@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       role: user.role
     };
 
-    console.log('Validation Result:', result);
+    // console.log('Validation Result:', result);
     return result;
   }
 } 

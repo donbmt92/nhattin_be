@@ -1,6 +1,5 @@
 /* eslint-disable prettier/prettier */
 import {
-  Controller,
   Get,
   Post,
   Body,
@@ -10,7 +9,7 @@ import {
   UseGuards,
   Query,
   UseInterceptors,
-  UploadedFile,
+  UploadedFile
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -31,7 +30,7 @@ import {
   ApiConsumes,
   ApiBody,
   ApiParam,
-  ApiQuery,
+  ApiQuery
 } from '@nestjs/swagger';
 import { Product } from './schemas/product.schema';
 
@@ -47,7 +46,7 @@ export class ProductsController {
   @UseInterceptors(FileInterceptor('image', multerConfig))
   @ApiOperation({
     summary: 'Tạo mới sản phẩm',
-    description: 'Tạo mới sản phẩm với thông tin cơ bản và hình ảnh',
+    description: 'Tạo mới sản phẩm với thông tin cơ bản và hình ảnh'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateProductDto })
@@ -60,26 +59,28 @@ export class ProductsController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy danh mục' })
   @Description('Tạo mới sản phẩm', [
     { status: 201, description: 'Tạo thành công' },
-    { status: 404, description: 'Không tìm thấy danh mục' },
+    { status: 404, description: 'Không tìm thấy danh mục' }
   ])
   create(
     @Body() createProductDto: CreateProductDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File
   ) {
+    console.log(createProductDto);
+
     return this.productsService.create(createProductDto, file);
   }
 
   @Get()
   @ApiOperation({
     summary: 'Lấy danh sách sản phẩm',
-    description: 'Lấy tất cả sản phẩm hoặc lọc theo danh mục',
+    description: 'Lấy tất cả sản phẩm hoặc lọc theo danh mục'
   })
   @ApiQuery({
     name: 'categoryId',
     required: false,
     description: 'ID của danh mục cần lọc',
     type: 'string',
-    example: '65abc123def456',
+    example: '65abc123def456'
   })
   @ApiResponse({
     status: 200,
@@ -87,7 +88,7 @@ export class ProductsController {
     type: [Product]
   })
   @Description('Lấy danh sách sản phẩm', [
-    { status: 200, description: 'Thành công' },
+    { status: 200, description: 'Thành công' }
   ])
   findAll(@Query('categoryId') categoryId?: string) {
     if (categoryId) {
@@ -99,12 +100,12 @@ export class ProductsController {
   @Get(':id')
   @ApiOperation({
     summary: 'Lấy thông tin sản phẩm',
-    description: 'Lấy thông tin chi tiết của một sản phẩm theo ID',
+    description: 'Lấy thông tin chi tiết của một sản phẩm theo ID'
   })
   @ApiParam({
     name: 'id',
     description: 'ID của sản phẩm',
-    example: '65abc123def456',
+    example: '65abc123def456'
   })
   @ApiResponse({
     status: 200,
@@ -114,7 +115,7 @@ export class ProductsController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
   @Description('Lấy thông tin sản phẩm', [
     { status: 200, description: 'Thành công' },
-    { status: 404, description: 'Không tìm thấy sản phẩm' },
+    { status: 404, description: 'Không tìm thấy sản phẩm' }
   ])
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(id);
@@ -125,12 +126,12 @@ export class ProductsController {
   @UseInterceptors(FileInterceptor('image', multerConfig))
   @ApiOperation({
     summary: 'Cập nhật sản phẩm',
-    description: 'Cập nhật thông tin sản phẩm theo ID',
+    description: 'Cập nhật thông tin sản phẩm theo ID'
   })
   @ApiParam({
     name: 'id',
     description: 'ID của sản phẩm cần cập nhật',
-    example: '65abc123def456',
+    example: '65abc123def456'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UpdateProductDto })
@@ -142,16 +143,16 @@ export class ProductsController {
   @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
   @ApiResponse({
     status: 404,
-    description: 'Không tìm thấy sản phẩm hoặc danh mục',
+    description: 'Không tìm thấy sản phẩm hoặc danh mục'
   })
   @Description('Cập nhật sản phẩm', [
     { status: 200, description: 'Cập nhật thành công' },
-    { status: 404, description: 'Không tìm thấy sản phẩm hoặc danh mục' },
+    { status: 404, description: 'Không tìm thấy sản phẩm hoặc danh mục' }
   ])
   update(
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File
   ) {
     return this.productsService.update(id, updateProductDto, file);
   }
@@ -160,20 +161,22 @@ export class ProductsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Xóa sản phẩm',
-    description: 'Xóa sản phẩm theo ID',
+    description: 'Xóa sản phẩm theo ID'
   })
   @ApiParam({
     name: 'id',
     description: 'ID của sản phẩm cần xóa',
-    example: '65abc123def456',
+    example: '65abc123def456'
   })
   @ApiResponse({ status: 200, description: 'Xóa thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
   @Description('Xóa sản phẩm', [
     { status: 200, description: 'Xóa thành công' },
-    { status: 404, description: 'Không tìm thấy sản phẩm' },
+    { status: 404, description: 'Không tìm thấy sản phẩm' }
   ])
   remove(@Param('id') id: string) {
-    return this.productsService.remove(id);
+    console.log('delete', id);
+    const result = this.productsService.remove(id);
+    return result;
   }
 }

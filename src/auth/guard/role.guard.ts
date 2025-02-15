@@ -9,12 +9,10 @@ import { UserRole } from "src/users/enum/role.enum";
 import { JwtService } from "@nestjs/jwt";
 import { jwtConstants } from "../constants";
 
-
 @Injectable()
 export class RolesGuard implements CanActivate {
     private readonly _userService: UsersService;
     private readonly _jwtService: JwtService;
-
 
     constructor(private reflector: Reflector, userService: UsersService, jwtService: JwtService) {
         this._userService = userService;
@@ -30,17 +28,28 @@ export class RolesGuard implements CanActivate {
             return true;
         }
 
-        const request = context.switchToHttp().getRequest<Request>();
-        // const authHeader = request.headers.authorization;
-        const token = this.extractTokenFromHeader(request);
-        const role = this.reflector.get<string[]>('roles', context.getHandler());
-        if (!role) {
+        // Check if endpoint requires roles
+        const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());
+        if (!requiredRoles || requiredRoles.length === 0) {
+            console.log('No roles required - Access granted');
             return true;
         }
-        if (!token) {
-            return false;
+
+        const request = context.switchToHttp().getRequest<Request>();
+        
+        // Skip role check for GET methods
+        if (request.method === 'GET') {
+            console.log('GET method - Skipping role check');
+            return true;
         }
-        var payload:any;
+
+        const token = this.extractTokenFromHeader(request);
+        if (!token) {
+            console.log('No token provided - Access denied');
+            throw MessengeCode.USER.NOT_FOUND;
+        }
+       
+        let payload:any;
         try {
             payload = await this._jwtService.verifyAsync(
                 token,
@@ -48,23 +57,37 @@ export class RolesGuard implements CanActivate {
                     secret: jwtConstants.secret
                 }
             );
-            // 💡 We're assigning the payload to the request object here
-            // so that we can access it in our route handlers
             request['user'] = payload;
-        } catch {
+        } catch (error) {
+            console.log('Invalid token error:', error);
             throw MessengeCode.USER.NOT_FOUND;
         }
 
-        const dataUser = await this._userService.findByPhone(payload.username);
-            if (dataUser.role != role) {
-                throw MessengeCode.ROLE.ROLE_IS_NOT_PERMISSION;
-            }
+        const dataUser = await this._userService.findByPhone(payload.phone);
+        
+        // Check if the role exists and matches
+        if (!dataUser || !dataUser.role) {
+            console.log('No user role found - Access denied');
+            throw MessengeCode.ROLE.ROLE_IS_NOT_PERMISSION;
+        }
 
+        // Convert both to uppercase for comparison
+        const userRole = dataUser.role.toUpperCase();
+        const requiredRole = requiredRoles[0].toUpperCase();
+        
+        console.log('Comparing roles:', { userRole, requiredRole });
+        
+        if (userRole !== requiredRole) {
+            console.log('Role mismatch - Access denied');
+            throw MessengeCode.ROLE.ROLE_IS_NOT_PERMISSION;
+        }
+        
+        console.log('Role check passed - Access granted');
+        // Add role to request for downstream use
+        request['user'] = { ...request['user'], role: dataUser.role };
         return true;
     }
-    handleRequest(err, user, info) {
-        return user;
-    }
+
     private extractTokenFromHeader(request: Request): string | undefined {
         const [type, token] = request.headers.authorization?.split(' ') ?? [];
         return type === 'Bearer' ? token : undefined;

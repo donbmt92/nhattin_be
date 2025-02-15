@@ -19,8 +19,10 @@ export class CategoryService {
       name: createCategoryDto.name,
       type: createCategoryDto.type
     });
-
+    console.log('existingCategory', existingCategory);
+    
     if (existingCategory) {
+      console.log('existingCategory', existingCategory);
       throw MessengeCode.CATEGORY.ALREADY_EXISTS;
     }
 
@@ -61,7 +63,7 @@ export class CategoryService {
     }
 
     return updatedCategory;
-  }
+}
 
   async remove(id: string): Promise<Category> {
     console.log('id', id);
