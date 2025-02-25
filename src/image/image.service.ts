@@ -71,8 +71,39 @@ export class ImageService {
     }
   }
 
+  async removeByLink(link: string): Promise<Image> {
+    try {
+      const image = await this.imageModel.findOne({ link }).lean().exec();
+      if (!image) {
+        throw new BadRequestException('Không tìm thấy hình ảnh với đường dẫn này');
+      }
+
+      // Delete physical files
+      await this.uploadService.deleteFile(image.link);
+      if (image.thumbnail) {
+        await this.uploadService.deleteFile(image.thumbnail);
+      }
+
+      // Delete database record
+      const deletedImage = await this.imageModel
+        .findByIdAndDelete(image._id)
+        .lean()
+        .exec();
+
+      if (!deletedImage) {
+        throw new BadRequestException('Không thể xóa hình ảnh');
+      }
+
+      return deletedImage;
+    } catch (error) {
+      throw new BadRequestException('Không thể xóa hình ảnh: ' + error.message);
+    }
+  }
+
   async remove(id: string): Promise<Image> {
     try {
+      console.log('id', id);
+      
       if (!isValidObjectId(id)) {
         throw new BadRequestException('ID hình ảnh không hợp lệ');
       }

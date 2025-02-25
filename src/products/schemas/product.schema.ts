@@ -6,7 +6,7 @@ export type ProductDocument = Product & Document;
 
 @Schema({ timestamps: true })
 export class Product {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'ID của danh mục',
     type: String,
     example: '65abc123def456'
@@ -14,7 +14,7 @@ export class Product {
   @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
   id_category: Types.ObjectId;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'ID của khuyến mãi',
     type: String,
     example: '65abc123def456',
@@ -23,7 +23,7 @@ export class Product {
   @Prop({ type: Types.ObjectId, ref: 'Discount', required: false })
   id_discount: Types.ObjectId;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'ID của kho hàng',
     type: String,
     example: '65abc123def456',
@@ -32,7 +32,7 @@ export class Product {
   @Prop({ type: Types.ObjectId, ref: 'Inventory', required: false })
   id_inventory: Types.ObjectId;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Tên sản phẩm',
     example: 'Áo thun nam',
     minLength: 3,
@@ -41,14 +41,14 @@ export class Product {
   @Prop({ required: true })
   name: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Đường dẫn hình ảnh gốc sản phẩm',
     example: 'uploads/products/ao-thun-nam.jpg'
   })
   @Prop({ required: true })
   image: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Đường dẫn hình ảnh thumbnail sản phẩm',
     example: 'uploads/products/thumb_ao-thun-nam.jpg',
     required: false
@@ -56,14 +56,14 @@ export class Product {
   @Prop()
   thumbnail?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Mô tả chi tiết sản phẩm',
     example: 'Áo thun nam cotton 100%, form regular fit'
   })
   @Prop({ required: true })
   desc: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Giá sản phẩm (VND)',
     example: 199000,
     minimum: 0
@@ -71,13 +71,13 @@ export class Product {
   @Prop({ required: true })
   price: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Thời gian tạo',
     example: '2024-03-20T03:00:00.000Z'
   })
   createdAt?: Date;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Thời gian cập nhật',
     example: '2024-03-20T03:00:00.000Z'
   })

@@ -1,10 +1,10 @@
 import {
   IsMongoId,
   IsString,
-  IsNumber,
-  Min,
   IsOptional,
-  Length
+  Length,
+  IsNumber,
+  Min
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -45,6 +45,21 @@ export class CreateProductDto {
   name: string;
 
   @ApiProperty({
+    description: 'Giá sản phẩm (VND)',
+    example: 199000,
+    required: false
+  })
+  @IsOptional()
+  price: number;
+
+  @ApiProperty({
+    description: 'Mô tả sản phẩm',
+    example: 'Áo thun nam cotton 100%'
+  })
+  @IsString()
+  desc: string;
+
+  @ApiProperty({
     type: 'string',
     format: 'binary',
     description: 'File ảnh sản phẩm (jpg, png, jpeg)',
@@ -52,20 +67,4 @@ export class CreateProductDto {
   })
   @IsOptional()
   image: any;
-
-  @ApiProperty({
-    description: 'Mô tả sản phẩm',
-    example: 'Áo thun nam cotton 100%, form regular fit'
-  })
-  @IsString()
-  desc: string;
-
-  @ApiProperty({
-    description: 'Giá sản phẩm (VND)',
-    example: 199000,
-    minimum: 0
-  })
-  @IsNumber()
-  @Min(0)
-  price: number;
 }

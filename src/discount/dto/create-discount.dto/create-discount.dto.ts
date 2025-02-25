@@ -1,5 +1,13 @@
-import { IsString, Length, IsNumber, Min, Max, IsDate } from "class-validator";
-import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsString,
+  Length,
+  IsNumber,
+  Min,
+  Max,
+  IsDate,
+  IsOptional
+} from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateDiscountDto {
   @ApiProperty({
@@ -8,8 +16,8 @@ export class CreateDiscountDto {
     maxLength: 50,
     example: 'Khuyến mãi tết'
   })
-  @IsString()
   @Length(3, 50)
+  @IsString()
   name: string;
 
   @ApiProperty({
@@ -37,14 +45,16 @@ export class CreateDiscountDto {
     description: 'Thời gian bắt đầu',
     example: '2024-01-20T00:00:00.000Z'
   })
-  @IsDate()
+  // @IsDate()
+  @IsOptional()
   time_start: Date;
 
   @ApiProperty({
     description: 'Thời gian kết thúc',
     example: '2024-02-20T00:00:00.000Z'
   })
-  @IsDate()
+  // @IsDate()
+  @IsOptional()
   time_end: Date;
 
   @ApiProperty({

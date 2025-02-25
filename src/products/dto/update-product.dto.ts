@@ -1,7 +1,8 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateProductDto } from './create-product.dto';
+/* eslint-disable prettier/prettier */
+
 import { ApiProperty } from '@nestjs/swagger';
 import { IsMongoId, IsString, IsNumber, Min, IsOptional, Length } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateProductDto {
   @ApiProperty({ 
@@ -65,10 +66,12 @@ export class UpdateProductDto {
     description: 'Giá sản phẩm (VND)',
     example: 199000,
     minimum: 0,
-    required: false
+    required: false,
+    type: Number
   })
   @IsNumber()
   @IsOptional()
   @Min(0)
+  @Type(() => Number)
   price?: number;
 } 

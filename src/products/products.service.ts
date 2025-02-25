@@ -272,7 +272,9 @@ export class ProductsService {
       }
 
       // Delete product image from images collection
-      await this.imageService.remove(product.image);
+      if (product.image) {
+        await this.imageService.removeByLink(product.image);
+      }
 
       // Delete product
       const deletedProduct = await this.productModel
