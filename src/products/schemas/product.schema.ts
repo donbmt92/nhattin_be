@@ -1,8 +1,14 @@
+/* eslint-disable prettier/prettier */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 
 export type ProductDocument = Product & Document;
+
+export enum ProductStatus {
+  IN_STOCK = 'IN_STOCK',
+  OUT_OF_STOCK = 'OUT_OF_STOCK'
+}
 
 @Schema({ timestamps: true })
 export class Product {
@@ -34,7 +40,7 @@ export class Product {
 
   @ApiProperty({
     description: 'Tên sản phẩm',
-    example: 'Áo thun nam',
+    example: 'Tài khoản Netflix Premium',
     minLength: 3,
     maxLength: 100
   })
@@ -42,34 +48,91 @@ export class Product {
   name: string;
 
   @ApiProperty({
+    description: 'Mô tả sản phẩm',
+    example: 'Tài khoản Netflix Premium chất lượng cao, xem phim không giới hạn'
+  })
+  @Prop({ required: true })
+  description: string;
+
+  @ApiProperty({
     description: 'Đường dẫn hình ảnh gốc sản phẩm',
-    example: 'uploads/products/ao-thun-nam.jpg'
+    example: 'uploads/products/netflix-premium.jpg'
   })
   @Prop({ required: true })
   image: string;
 
   @ApiProperty({
     description: 'Đường dẫn hình ảnh thumbnail sản phẩm',
-    example: 'uploads/products/thumb_ao-thun-nam.jpg',
+    example: 'uploads/products/thumb_netflix-premium.jpg',
     required: false
   })
   @Prop()
   thumbnail?: string;
 
   @ApiProperty({
-    description: 'Mô tả chi tiết sản phẩm',
-    example: 'Áo thun nam cotton 100%, form regular fit'
-  })
-  @Prop({ required: true })
-  desc: string;
-
-  @ApiProperty({
-    description: 'Giá sản phẩm (VND)',
-    example: 199000,
+    description: 'Giá gốc sản phẩm (VND)',
+    example: 299000,
     minimum: 0
   })
   @Prop({ required: true })
-  price: number;
+  base_price: number;
+
+  @ApiProperty({
+    description: 'Giá thấp nhất (VND)',
+    example: 10000,
+    minimum: 0
+  })
+  @Prop({ required: true })
+  min_price: number;
+
+  @ApiProperty({
+    description: 'Giá cao nhất (VND)',
+    example: 849000,
+    minimum: 0
+  })
+  @Prop({ required: true })
+  max_price: number;
+
+  @ApiProperty({
+    description: 'Điểm đánh giá trung bình',
+    example: 5.0,
+    minimum: 0,
+    maximum: 5
+  })
+  @Prop({ default: 0 })
+  rating: number;
+
+  @ApiProperty({
+    description: 'Số lượng đánh giá',
+    example: 173,
+    minimum: 0
+  })
+  @Prop({ default: 0 })
+  total_reviews: number;
+
+  @ApiProperty({
+    description: 'Số lượng đã bán',
+    example: 27268,
+    minimum: 0
+  })
+  @Prop({ default: 0 })
+  sold: number;
+
+  @ApiProperty({
+    description: 'Chính sách bảo hành',
+    example: true,
+    type: Boolean
+  })
+  @Prop({ default: false })
+  warranty_policy: boolean;
+
+  @ApiProperty({
+    description: 'Tình trạng sản phẩm',
+    enum: ProductStatus,
+    default: ProductStatus.IN_STOCK
+  })
+  @Prop({ default: ProductStatus.IN_STOCK })
+  status: ProductStatus;
 
   @ApiProperty({
     description: 'Thời gian tạo',

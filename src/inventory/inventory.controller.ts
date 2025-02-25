@@ -1,21 +1,28 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Put, 
-  Param, 
-  Delete, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
   UseGuards,
-  Query 
+  Query
 } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryDto } from './dto/create-inventory.dto';
 import { UpdateInventoryDto } from './dto/update-inventory.dto';
 import { RolesGuard } from '../auth/guard/role.guard';
 import { Roles } from '../common/meta/role.meta';
-import { UserRole } from '../users/enum/role.enum';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Role } from '../users/enum/role.enum';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery
+} from '@nestjs/swagger';
 import { Inventory } from './schemas/inventory.schema';
 
 @ApiTags('Inventory')
@@ -26,7 +33,7 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Tạo mới inventory (Admin)' })
   @ApiResponse({
     status: 201,
@@ -97,7 +104,7 @@ export class InventoryController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Cập nhật số lượng inventory (Admin)' })
   @ApiParam({
     name: 'id',
@@ -119,13 +126,13 @@ export class InventoryController {
   })
   update(
     @Param('id') id: string,
-    @Body() updateInventoryDto: UpdateInventoryDto,
+    @Body() updateInventoryDto: UpdateInventoryDto
   ) {
     return this.inventoryService.update(id, updateInventoryDto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Xóa inventory (Admin)' })
   @ApiParam({
     name: 'id',
@@ -176,8 +183,8 @@ export class InventoryController {
   })
   checkStock(
     @Param('productId') productId: string,
-    @Query('quantity') quantity: number,
+    @Query('quantity') quantity: number
   ) {
     return this.inventoryService.checkStock(productId, quantity);
   }
-} 
+}

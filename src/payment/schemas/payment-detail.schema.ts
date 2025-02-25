@@ -7,7 +7,7 @@ export type PaymentDetailDocument = PaymentDetail & Document;
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: function(doc, ret) {
+    transform: function (doc, ret) {
       delete ret._id;
       delete ret.__v;
       return ret;
@@ -28,4 +28,4 @@ export class PaymentDetail {
 export const PaymentDetailSchema = SchemaFactory.createForClass(PaymentDetail);
 
 // Index cho tìm kiếm theo order
-PaymentDetailSchema.index({ id_order: 1 }); 
+PaymentDetailSchema.index({ id_order: 1 });

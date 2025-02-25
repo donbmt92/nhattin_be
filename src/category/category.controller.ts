@@ -18,7 +18,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Control } from '../common/meta/control.meta';
 import { Description } from '../common/meta/description.meta';
 import { Roles } from '../common/meta/role.meta';
-import { UserRole } from '../users/enum/role.enum';
+import { Role } from '../users/enum/role.enum';
 import { User } from '../common/meta/user.meta';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -33,7 +33,7 @@ export class CategoryController {
   }
 
   @Post()
-  // @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Tạo mới danh mục', [
     { status: 201, description: 'Tạo thành công' },
     { status: 400, description: 'Danh mục đã tồn tại' }
@@ -76,7 +76,7 @@ export class CategoryController {
   }
 
   @Patch()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Cập nhật danh mục', [
     { status: 200, description: 'Cập nhật thành công' },
     { status: 404, description: 'Không tìm thấy danh mục' }
@@ -90,7 +90,7 @@ export class CategoryController {
   }
 
   @Delete()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Xóa danh mục', [
     { status: 200, description: 'Xóa thành công' },
     { status: 404, description: 'Không tìm thấy danh mục' }

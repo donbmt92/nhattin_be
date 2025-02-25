@@ -16,7 +16,7 @@ import { RolesGuard } from '../auth/guard/role.guard';
 import { Control } from '../common/meta/control.meta';
 import { Description } from '../common/meta/description.meta';
 import { Roles } from '../common/meta/role.meta';
-import { UserRole } from '../users/enum/role.enum';
+import { Role } from '../users/enum/role.enum';
 
 @Control('navigation')
 @UseGuards(RolesGuard)
@@ -24,7 +24,7 @@ export class NavigationController {
   constructor(private readonly navigationService: NavigationService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Tạo mới navigation', [
     { status: 201, description: 'Tạo thành công' },
     { status: 400, description: 'Navigation đã tồn tại' },
@@ -55,7 +55,7 @@ export class NavigationController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Cập nhật navigation', [
     { status: 200, description: 'Cập nhật thành công' },
     { status: 404, description: 'Không tìm thấy navigation hoặc page' },
@@ -68,7 +68,7 @@ export class NavigationController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Xóa navigation', [
     { status: 200, description: 'Xóa thành công' },
     { status: 404, description: 'Không tìm thấy navigation' },

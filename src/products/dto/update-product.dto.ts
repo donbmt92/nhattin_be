@@ -74,4 +74,30 @@ export class UpdateProductDto {
   @Min(0)
   @Type(() => Number)
   price?: number;
+
+  @ApiProperty({ 
+    description: 'Giá gốc sản phẩm (VND)',
+    example: 299000,
+    minimum: 0,
+    required: false,
+    type: Number
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  original_price?: number;
+
+  @ApiProperty({ 
+    description: 'Giá hiện tại sản phẩm (VND)',
+    example: 179000,
+    minimum: 0,
+    required: false,
+    type: Number
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  current_price?: number;
 } 

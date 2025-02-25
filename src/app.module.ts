@@ -15,6 +15,10 @@ import { CategoryModule } from './category/category.module';
 import { ImageModule } from './image/image.module';
 import { NavigationModule } from './navigation/navigation.module';
 import { PagesModule } from './pages/pages.module';
+import { CategoriesModule } from './categories/categories.module';
+import { SubscriptionTypesModule } from './subscription-types/subscription-types.module';
+import { SubscriptionDurationsModule } from './subscription-durations/subscription-durations.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD } from '@nestjs/core';
@@ -49,7 +53,11 @@ const ENV = process.env.NODE_ENV;
     CategoryModule,
     ImageModule,
     NavigationModule,
-    PagesModule
+    PagesModule,
+    CategoriesModule,
+    SubscriptionTypesModule,
+    SubscriptionDurationsModule,
+    SubscriptionsModule
   ],
   controllers: [],
   providers: [

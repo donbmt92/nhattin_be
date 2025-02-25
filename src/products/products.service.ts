@@ -14,13 +14,18 @@ import { MessengeCode } from '../common/exception/MessengeCode';
 import { CategoryService } from '../category/category.service';
 import { ImageService } from '../image/image.service';
 import { CreateImageDto } from '../image/dto/create-image.dto';
+import { SubscriptionTypesService } from '../subscription-types/subscription-types.service';
+import { SubscriptionDurationsService } from '../subscription-durations/subscription-durations.service';
+import { MongooseUtils } from '../common/utils/mongoose.utils';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     private readonly categoryService: CategoryService,
-    private readonly imageService: ImageService
+    private readonly imageService: ImageService,
+    private readonly subscriptionTypesService: SubscriptionTypesService,
+    private readonly subscriptionDurationsService: SubscriptionDurationsService
   ) {}
 
   async create(
@@ -28,27 +33,30 @@ export class ProductsService {
     file: Express.Multer.File
   ): Promise<ProductModel> {
     try {
+      // Chuyển đổi string ID sang ObjectId
+      const data = MongooseUtils.convertToObjectIds(createProductDto);
+
       // Validate ObjectIds
-      if (!isValidObjectId(createProductDto.id_category)) {
+      if (!isValidObjectId(data.id_category)) {
         throw new BadRequestException('ID danh mục không hợp lệ');
       }
 
       if (
-        createProductDto.id_discount &&
-        !isValidObjectId(createProductDto.id_discount)
+        data.id_discount &&
+        !isValidObjectId(data.id_discount)
       ) {
         throw new BadRequestException('ID khuyến mãi không hợp lệ');
       }
 
       if (
-        createProductDto.id_inventory &&
-        !isValidObjectId(createProductDto.id_inventory)
+        data.id_inventory &&
+        !isValidObjectId(data.id_inventory)
       ) {
         throw new BadRequestException('ID kho hàng không hợp lệ');
       }
 
       // Check if category exists
-      await this.categoryService.findOne(createProductDto.id_category);
+      await this.categoryService.findOne(data.id_category);
 
       // Validate and save file
       if (!file) {
@@ -63,14 +71,7 @@ export class ProductsService {
 
       // Create product with validated ObjectIds and saved image
       const createdProduct = new this.productModel({
-        ...createProductDto,
-        id_category: new Types.ObjectId(createProductDto.id_category),
-        id_discount: createProductDto.id_discount
-          ? new Types.ObjectId(createProductDto.id_discount)
-          : undefined,
-        id_inventory: createProductDto.id_inventory
-          ? new Types.ObjectId(createProductDto.id_inventory)
-          : undefined,
+        ...data,
         image: savedImage.link,
         thumbnail: savedImage.thumbnail
       });
@@ -89,19 +90,8 @@ export class ProductsService {
   }
 
   async findAll(): Promise<ProductModel[]> {
-    try {
-      const products = await this.productModel
-        .find()
-        .populate('id_category')
-        .populate('id_discount')
-        .populate('id_inventory')
-        .exec();
-      return ProductModel.fromEntities(products);
-    } catch (error) {
-      throw new BadRequestException(
-        'Không thể lấy danh sách sản phẩm: ' + error.message
-      );
-    }
+    const products = await this.productModel.find().exec();
+    return products.map(product => ProductModel.fromEntity(product));
   }
 
   async findOne(id: string): Promise<ProductModel> {
@@ -134,29 +124,11 @@ export class ProductsService {
   }
 
   async findById(id: string): Promise<ProductModel> {
-    try {
-      if (!isValidObjectId(id)) {
-        throw new BadRequestException('ID sản phẩm không hợp lệ');
-      }
-
-      const product = await this.productModel
-        .findById(new Types.ObjectId(id))
-        .exec();
-
-      if (!product) {
-        throw new NotFoundException('Không tìm thấy sản phẩm');
-      }
-
-      return ProductModel.fromEntity(product);
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
-      throw new BadRequestException('Không thể tìm sản phẩm: ' + error.message);
+    const product = await this.productModel.findById(id).exec();
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
     }
+    return ProductModel.fromEntity(product);
   }
 
   async update(
@@ -165,6 +137,9 @@ export class ProductsService {
     file: Express.Multer.File
   ): Promise<ProductModel> {
     try {
+      // Chuyển đổi string ID sang ObjectId
+      const updateData = MongooseUtils.convertToObjectIds(updateProductDto);
+
       // Validate product ID
       if (!isValidObjectId(id)) {
         throw new BadRequestException('ID sản phẩm không hợp lệ');
@@ -178,29 +153,29 @@ export class ProductsService {
 
       // Validate other ObjectIds if provided
       if (
-        updateProductDto.id_category &&
-        !isValidObjectId(updateProductDto.id_category)
+        updateData.id_category &&
+        !isValidObjectId(updateData.id_category)
       ) {
         throw new BadRequestException('ID danh mục không hợp lệ');
       }
 
       if (
-        updateProductDto.id_discount &&
-        !isValidObjectId(updateProductDto.id_discount)
+        updateData.id_discount &&
+        !isValidObjectId(updateData.id_discount)
       ) {
         throw new BadRequestException('ID khuyến mãi không hợp lệ');
       }
 
       if (
-        updateProductDto.id_inventory &&
-        !isValidObjectId(updateProductDto.id_inventory)
+        updateData.id_inventory &&
+        !isValidObjectId(updateData.id_inventory)
       ) {
         throw new BadRequestException('ID kho hàng không hợp lệ');
       }
 
       // Check if category exists if provided
-      if (updateProductDto.id_category) {
-        await this.categoryService.findOne(updateProductDto.id_category);
+      if (updateData.id_category) {
+        await this.categoryService.findOne(updateData.id_category);
       }
 
       // Handle file update
@@ -217,28 +192,28 @@ export class ProductsService {
       }
 
       // Prepare update data
-      const updateData = {
-        ...updateProductDto,
-        id_category: updateProductDto.id_category
-          ? new Types.ObjectId(updateProductDto.id_category)
+      const updateDataFinal = {
+        ...updateData,
+        id_category: updateData.id_category
+          ? new Types.ObjectId(updateData.id_category)
           : undefined,
-        id_discount: updateProductDto.id_discount
-          ? new Types.ObjectId(updateProductDto.id_discount)
+        id_discount: updateData.id_discount
+          ? new Types.ObjectId(updateData.id_discount)
           : undefined,
-        id_inventory: updateProductDto.id_inventory
-          ? new Types.ObjectId(updateProductDto.id_inventory)
+        id_inventory: updateData.id_inventory
+          ? new Types.ObjectId(updateData.id_inventory)
           : undefined,
         image: imagePath,
         thumbnail: thumbnailPath
       };
 
       // Remove undefined fields
-      Object.keys(updateData).forEach(
-        (key) => updateData[key] === undefined && delete updateData[key]
+      Object.keys(updateDataFinal).forEach(
+        (key) => updateDataFinal[key] === undefined && delete updateDataFinal[key]
       );
 
       const updatedProduct = await this.productModel
-        .findByIdAndUpdate(new Types.ObjectId(id), updateData, { new: true })
+        .findByIdAndUpdate(new Types.ObjectId(id), updateDataFinal, { new: true })
         .exec();
 
       if (!updatedProduct) {
@@ -308,5 +283,21 @@ export class ProductsService {
         'Không thể lấy danh sách sản phẩm theo danh mục: ' + error.message
       );
     }
+  }
+
+  async getProductDetails(id: string): Promise<any> {
+    const product = await this.findById(id);
+    
+    // Lấy danh sách loại gói đăng ký của sản phẩm
+    const subscriptionTypes = await this.subscriptionTypesService.findByProductId(id);
+    
+    // Lấy danh sách thời hạn gói đăng ký của sản phẩm
+    const subscriptionDurations = await this.subscriptionDurationsService.findByProductId(id);
+    
+    return {
+      ...product,
+      subscription_types: subscriptionTypes,
+      subscription_durations: subscriptionDurations
+    };
   }
 }

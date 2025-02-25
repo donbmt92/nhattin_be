@@ -18,7 +18,7 @@ import { RolesGuard } from '../auth/guard/role.guard';
 import { Control } from '../common/meta/control.meta';
 import { Description } from '../common/meta/description.meta';
 import { Roles } from '../common/meta/role.meta';
-import { UserRole } from '../users/enum/role.enum';
+import { Role } from '../users/enum/role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { multerConfig } from '../config/multer.config';
@@ -42,7 +42,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @UseInterceptors(FileInterceptor('image', multerConfig))
   @ApiOperation({
     summary: 'Tạo mới sản phẩm',
@@ -94,6 +94,8 @@ export class ProductsController {
     if (categoryId) {
       return this.productsService.findByCategory(categoryId);
     }
+    console.log(this.productsService.findAll());
+    
     return this.productsService.findAll();
   }
 
@@ -122,7 +124,7 @@ export class ProductsController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @UseInterceptors(FileInterceptor('image', multerConfig))
   @ApiOperation({
     summary: 'Cập nhật sản phẩm',
@@ -159,7 +161,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({
     summary: 'Xóa sản phẩm',
     description: 'Xóa sản phẩm theo ID'
@@ -179,5 +181,13 @@ export class ProductsController {
     console.log('delete', id);
     const result = this.productsService.remove(id);
     return result;
+  }
+
+  @Get(':id/details')
+  @ApiOperation({ summary: 'Lấy thông tin chi tiết sản phẩm bao gồm loại gói và thời hạn' })
+  @ApiResponse({ status: 200, description: 'Thông tin chi tiết sản phẩm' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
+  async getProductDetails(@Param('id') id: string) {
+    return this.productsService.getProductDetails(id);
   }
 }

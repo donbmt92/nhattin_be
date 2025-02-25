@@ -1,10 +1,25 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
+/* eslint-disable prettier/prettier */
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Query
+} from '@nestjs/common';
 import { InventoryLogsService } from './inventory-logs.service';
 import { CreateInventoryLogDto } from './dto/create-inventory-log.dto';
 import { RolesGuard } from '../auth/guard/role.guard';
 import { Roles } from '../common/meta/role.meta';
-import { UserRole } from '../users/enum/role.enum';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Role } from '../users/enum/role.enum';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam
+} from '@nestjs/swagger';
 import { InventoryLog } from './schemas/inventory-log.schema';
 
 @ApiTags('Inventory Logs')
@@ -15,7 +30,7 @@ export class InventoryLogsController {
   constructor(private readonly inventoryLogsService: InventoryLogsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Tạo mới log giao dịch tồn kho (Admin)' })
   @ApiResponse({
     status: 201,
@@ -96,4 +111,4 @@ export class InventoryLogsController {
   findByInventoryId(@Param('id') id: string) {
     return this.inventoryLogsService.findByInventoryId(id);
   }
-} 
+}

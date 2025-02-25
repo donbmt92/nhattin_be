@@ -1,11 +1,9 @@
 /* eslint-disable prettier/prettier */
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { Observable } from "rxjs";
 import { MessengeCode } from "src/common/exception/MessengeCode";
 import { Request } from 'express';
 import { UsersService } from "src/users/users.service";
-import { UserRole } from "src/users/enum/role.enum";
 import { JwtService } from "@nestjs/jwt";
 import { jwtConstants } from "../constants";
 
@@ -77,7 +75,7 @@ export class RolesGuard implements CanActivate {
         
         console.log('Comparing roles:', { userRole, requiredRole });
         
-        if (userRole !== requiredRole) {
+        if (userRole !== requiredRole && userRole !== 'ADMIN') {
             console.log('Role mismatch - Access denied');
             throw MessengeCode.ROLE.ROLE_IS_NOT_PERMISSION;
         }

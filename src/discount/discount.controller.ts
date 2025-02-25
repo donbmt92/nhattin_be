@@ -16,7 +16,7 @@ import { RolesGuard } from '../auth/guard/role.guard';
 import { Control } from '../common/meta/control.meta';
 import { Description } from '../common/meta/description.meta';
 import { Roles } from '../common/meta/role.meta';
-import { UserRole } from '../users/enum/role.enum';
+import { Role } from '../users/enum/role.enum';
 import { CreateDiscountDto } from './dto/create-discount.dto/create-discount.dto';
 import { UpdateDiscountDto } from './dto/update-discount.dto/update-discount.dto';
 import {
@@ -31,16 +31,18 @@ import {
 @ApiBearerAuth()
 @Control('discounts')
 @UseGuards(RolesGuard)
-@UsePipes(new ValidationPipe({
-  transform: true,
-  whitelist: true,
-  forbidNonWhitelisted: true
-}))
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true
+  })
+)
 export class DiscountController {
   constructor(private readonly discountService: DiscountService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Tạo mới khuyến mãi' })
   @ApiResponse({ status: 201, description: 'Tạo thành công' })
   @ApiResponse({ status: 400, description: 'Khuyến mãi đã tồn tại' })
@@ -53,9 +55,11 @@ export class DiscountController {
     try {
       // Convert form data values to appropriate types
       if (typeof createDiscountDto.discount_percent === 'string') {
-        createDiscountDto.discount_percent = Number(createDiscountDto.discount_percent);
+        createDiscountDto.discount_percent = Number(
+          createDiscountDto.discount_percent
+        );
       }
-      
+
       console.log('Received DTO:', createDiscountDto);
       return this.discountService.create(createDiscountDto);
     } catch (error) {
@@ -96,7 +100,7 @@ export class DiscountController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Cập nhật khuyến mãi' })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy khuyến mãi' })
@@ -112,7 +116,7 @@ export class DiscountController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Xóa khuyến mãi' })
   @ApiResponse({ status: 200, description: 'Xóa thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy khuyến mãi' })

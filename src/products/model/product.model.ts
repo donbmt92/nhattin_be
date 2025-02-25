@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { BaseModel } from '../../common/model/base.model';
 import { Types } from 'mongoose';
 
@@ -9,6 +10,8 @@ export class ProductModel extends BaseModel {
   image: string;
   desc: string;
   price: number;
+  original_price?: number;
+  current_price?: number;
 
   constructor(product: any) {
     super(product);
@@ -19,6 +22,8 @@ export class ProductModel extends BaseModel {
     this.image = product.image;
     this.desc = product.desc;
     this.price = product.price;
+    this.original_price = product.original_price;
+    this.current_price = product.current_price;
   }
 
   static fromEntity(entity: any): ProductModel {
@@ -31,12 +36,16 @@ export class ProductModel extends BaseModel {
       image: entity.image,
       desc: entity.desc,
       price: entity.price,
+      original_price: entity.original_price,
+      current_price: entity.current_price,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     });
   }
 
   static fromEntities(entities: any[]): ProductModel[] {
+    
     return entities.map(entity => ProductModel.fromEntity(entity));
   }
+
 }

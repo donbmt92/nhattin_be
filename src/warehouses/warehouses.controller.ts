@@ -15,7 +15,7 @@ import { RolesGuard } from '../auth/guard/role.guard';
 import { Control } from '../common/meta/control.meta';
 import { Description } from '../common/meta/description.meta';
 import { Roles } from '../common/meta/role.meta';
-import { UserRole } from '../users/enum/role.enum';
+import { Role } from '../users/enum/role.enum';
 
 @Control('warehouses')
 @UseGuards(RolesGuard)
@@ -23,7 +23,7 @@ export class WarehousesController {
   constructor(private readonly warehousesService: WarehousesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Tạo mới kho', [
     { status: 201, description: 'Tạo thành công' },
     { status: 400, description: 'Kho đã tồn tại' }
@@ -50,7 +50,7 @@ export class WarehousesController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Cập nhật kho', [
     { status: 200, description: 'Cập nhật thành công' },
     { status: 404, description: 'Không tìm thấy kho' }
@@ -63,7 +63,7 @@ export class WarehousesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(Role.ADMIN)
   @Description('Xóa kho', [
     { status: 200, description: 'Xóa thành công' },
     { status: 404, description: 'Không tìm thấy kho' }

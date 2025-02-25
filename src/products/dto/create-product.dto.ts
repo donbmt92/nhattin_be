@@ -1,16 +1,22 @@
+/* eslint-disable prettier/prettier */
 import {
   IsMongoId,
   IsString,
   IsOptional,
   Length,
   IsNumber,
-  Min
+  Min,
+  Max,
+  IsBoolean,
+  IsEnum
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ProductStatus } from '../schemas/product.schema';
 
 export class CreateProductDto {
   @ApiProperty({
     description: 'ID của danh mục',
+    type: String,
     example: '65abc123def456'
   })
   @IsMongoId()
@@ -18,6 +24,7 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: 'ID của khuyến mãi',
+    type: String,
     example: '65abc123def456',
     required: false
   })
@@ -27,6 +34,7 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: 'ID của kho hàng',
+    type: String,
     example: '65abc123def456',
     required: false
   })
@@ -36,7 +44,7 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: 'Tên sản phẩm',
-    example: 'Áo thun nam',
+    example: 'Tài khoản Netflix Premium',
     minLength: 3,
     maxLength: 100
   })
@@ -45,26 +53,107 @@ export class CreateProductDto {
   name: string;
 
   @ApiProperty({
-    description: 'Giá sản phẩm (VND)',
-    example: 199000,
-    required: false
-  })
-  @IsOptional()
-  price: number;
-
-  @ApiProperty({
     description: 'Mô tả sản phẩm',
-    example: 'Áo thun nam cotton 100%'
+    example: 'Tài khoản Netflix Premium chất lượng cao, xem phim không giới hạn'
   })
   @IsString()
-  desc: string;
+  description: string;
 
   @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    description: 'File ảnh sản phẩm (jpg, png, jpeg)',
-    required: true
+    description: 'Đường dẫn hình ảnh gốc sản phẩm',
+    example: 'uploads/products/netflix-premium.jpg'
   })
+  @IsString()
+  image: string;
+
+  @ApiProperty({
+    description: 'Đường dẫn hình ảnh thumbnail sản phẩm',
+    example: 'uploads/products/thumb_netflix-premium.jpg',
+    required: false
+  })
+  @IsString()
   @IsOptional()
-  image: any;
+  thumbnail?: string;
+
+  @ApiProperty({
+    description: 'Giá gốc sản phẩm (VND)',
+    example: 299000,
+    minimum: 0
+  })
+  @IsNumber()
+  @Min(0)
+  base_price: number;
+
+  @ApiProperty({
+    description: 'Giá thấp nhất (VND)',
+    example: 10000,
+    minimum: 0
+  })
+  @IsNumber()
+  @Min(0)
+  min_price: number;
+
+  @ApiProperty({
+    description: 'Giá cao nhất (VND)',
+    example: 849000,
+    minimum: 0
+  })
+  @IsNumber()
+  @Min(0)
+  max_price: number;
+
+  @ApiProperty({
+    description: 'Điểm đánh giá trung bình',
+    example: 5.0,
+    minimum: 0,
+    maximum: 5,
+    required: false
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  @IsOptional()
+  rating?: number;
+
+  @ApiProperty({
+    description: 'Số lượng đánh giá',
+    example: 173,
+    minimum: 0,
+    required: false
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  total_reviews?: number;
+
+  @ApiProperty({
+    description: 'Số lượng đã bán',
+    example: 27268,
+    minimum: 0,
+    required: false
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  sold?: number;
+
+  @ApiProperty({
+    description: 'Chính sách bảo hành',
+    example: true,
+    type: Boolean,
+    required: false
+  })
+  @IsBoolean()
+  @IsOptional()
+  warranty_policy?: boolean;
+
+  @ApiProperty({
+    description: 'Tình trạng sản phẩm',
+    enum: ProductStatus,
+    default: ProductStatus.IN_STOCK,
+    required: false
+  })
+  @IsEnum(ProductStatus)
+  @IsOptional()
+  status?: ProductStatus;
 }

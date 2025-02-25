@@ -6,6 +6,8 @@ import { ProductsService } from './products.service';
 import { CategoryModule } from '../category/category.module';
 import { ImageModule } from '../image/image.module';
 import { UsersModule } from '../users/users.module';
+import { SubscriptionTypesModule } from '../subscription-types/subscription-types.module';
+import { SubscriptionDurationsModule } from '../subscription-durations/subscription-durations.module';
 
 @Module({
   imports: [
@@ -13,9 +15,11 @@ import { UsersModule } from '../users/users.module';
     CategoryModule,
     ImageModule,
     UsersModule,
+    SubscriptionTypesModule,
+    SubscriptionDurationsModule
   ],
   controllers: [ProductsController],
   providers: [ProductsService],
-  exports: [ProductsService],
+  exports: [ProductsService]
 })
 export class ProductsModule {}

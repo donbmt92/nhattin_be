@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
-import { UserRole } from './enum/role.enum';
+import { Role } from './enum/role.enum';
 import { UserStatus } from './enum/status.enum';
 
 export type UserDocument = User & Document;
@@ -27,7 +27,7 @@ export class User {
   @Prop({ required: false, type: [String] })
   jwt: string[];
 
-  @Prop({ required: false, type: String, default: UserRole.USER })
+  @Prop({ required: false, type: String, default: Role.USER })
   role: string;
 
   @Prop({ required: false, type: String, default: UserStatus.ACTIVE })
