@@ -90,8 +90,21 @@ export class ProductsService {
   }
 
   async findAll(): Promise<ProductModel[]> {
-    const products = await this.productModel.find().exec();
-    return products.map(product => ProductModel.fromEntity(product));
+    const products = await this.productModel.find()
+      .populate('id_category')
+      .populate('id_discount')
+      .populate('id_inventory')
+      .exec();
+    
+    return products.map(product => {
+      // Ensure we have all necessary fields
+      const productData = {
+        ...product.toObject(),
+        price: product.base_price, // Map base_price to price
+        desc: product.description // Map description to desc
+      };
+      return ProductModel.fromEntity(productData);
+    });
   }
 
   async findOne(id: string): Promise<ProductModel> {
@@ -111,7 +124,14 @@ export class ProductsService {
         throw new NotFoundException('Không tìm thấy sản phẩm');
       }
 
-      return ProductModel.fromEntity(product);
+      // Ensure we have all necessary fields
+      const productData = {
+        ...product.toObject(),
+        price: product.base_price, // Map base_price to price
+        desc: product.description // Map description to desc
+      };
+      
+      return ProductModel.fromEntity(productData);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -124,11 +144,24 @@ export class ProductsService {
   }
 
   async findById(id: string): Promise<ProductModel> {
-    const product = await this.productModel.findById(id).exec();
+    const product = await this.productModel.findById(id)
+      .populate('id_category')
+      .populate('id_discount')
+      .populate('id_inventory')
+      .exec();
+      
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
-    return ProductModel.fromEntity(product);
+    
+    // Ensure we have all necessary fields
+    const productData = {
+      ...product.toObject(),
+      price: product.base_price, // Map base_price to price
+      desc: product.description // Map description to desc
+    };
+    
+    return ProductModel.fromEntity(productData);
   }
 
   async update(
@@ -271,10 +304,20 @@ export class ProductsService {
 
       const products = await this.productModel
         .find({ id_category: new Types.ObjectId(categoryId) })
+        .populate('id_category')
         .populate('id_discount')
         .populate('id_inventory')
         .exec();
-      return ProductModel.fromEntities(products);
+      
+      return products.map(product => {
+        // Ensure we have all necessary fields
+        const productData = {
+          ...product.toObject(),
+          price: product.base_price, // Map base_price to price
+          desc: product.description // Map description to desc
+        };
+        return ProductModel.fromEntity(productData);
+      });
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;

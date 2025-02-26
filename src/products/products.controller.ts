@@ -90,13 +90,16 @@ export class ProductsController {
   @Description('Lấy danh sách sản phẩm', [
     { status: 200, description: 'Thành công' }
   ])
-  findAll(@Query('categoryId') categoryId?: string) {
+  async findAll(@Query('categoryId') categoryId?: string) {
     if (categoryId) {
-      return this.productsService.findByCategory(categoryId);
+      const products = await this.productsService.findByCategory(categoryId);
+      console.log('Products by category:', JSON.stringify(products, null, 2));
+      return products;
     }
-    console.log(this.productsService.findAll());
     
-    return this.productsService.findAll();
+    const products = await this.productsService.findAll();
+    console.log('All products:', products);
+    return products;
   }
 
   @Get(':id')

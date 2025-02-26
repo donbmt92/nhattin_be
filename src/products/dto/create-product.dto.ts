@@ -63,7 +63,8 @@ export class CreateProductDto {
     description: 'Đường dẫn hình ảnh gốc sản phẩm',
     example: 'uploads/products/netflix-premium.jpg'
   })
-  @IsString()
+  @IsOptional()
+  // @IsString()
   image: string;
 
   @ApiProperty({
@@ -80,8 +81,9 @@ export class CreateProductDto {
     example: 299000,
     minimum: 0
   })
-  @IsNumber()
-  @Min(0)
+  // @IsNumber()
+  // @Min(0)
+  @IsOptional()
   base_price: number;
 
   @ApiProperty({
@@ -89,8 +91,9 @@ export class CreateProductDto {
     example: 10000,
     minimum: 0
   })
-  @IsNumber()
-  @Min(0)
+  @IsOptional()
+  // @IsNumber()
+  // @Min(0)
   min_price: number;
 
   @ApiProperty({
@@ -98,8 +101,9 @@ export class CreateProductDto {
     example: 849000,
     minimum: 0
   })
-  @IsNumber()
-  @Min(0)
+  @IsOptional()
+  // @IsNumber()
+  // @Min(0)
   max_price: number;
 
   @ApiProperty({
@@ -132,8 +136,8 @@ export class CreateProductDto {
     minimum: 0,
     required: false
   })
-  @IsNumber()
-  @Min(0)
+  // @IsNumber()
+  // @Min(0)
   @IsOptional()
   sold?: number;
 
@@ -143,7 +147,7 @@ export class CreateProductDto {
     type: Boolean,
     required: false
   })
-  @IsBoolean()
+  // @IsBoolean()
   @IsOptional()
   warranty_policy?: boolean;
 

@@ -63,19 +63,6 @@ export class UpdateProductDto {
   desc?: string;
 
   @ApiProperty({ 
-    description: 'Giá sản phẩm (VND)',
-    example: 199000,
-    minimum: 0,
-    required: false,
-    type: Number
-  })
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  @Type(() => Number)
-  price?: number;
-
-  @ApiProperty({ 
     description: 'Giá gốc sản phẩm (VND)',
     example: 299000,
     minimum: 0,
@@ -86,11 +73,11 @@ export class UpdateProductDto {
   @IsOptional()
   @Min(0)
   @Type(() => Number)
-  original_price?: number;
+  base_price?: number;
 
   @ApiProperty({ 
-    description: 'Giá hiện tại sản phẩm (VND)',
-    example: 179000,
+    description: 'Giá thấp nhất (VND)',
+    example: 10000,
     minimum: 0,
     required: false,
     type: Number
@@ -99,5 +86,18 @@ export class UpdateProductDto {
   @IsOptional()
   @Min(0)
   @Type(() => Number)
-  current_price?: number;
+  min_price?: number;
+
+  @ApiProperty({ 
+    description: 'Giá cao nhất (VND)',
+    example: 849000,
+    minimum: 0,
+    required: false,
+    type: Number
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  max_price?: number;
 } 
