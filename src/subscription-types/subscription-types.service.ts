@@ -4,12 +4,16 @@ import { SubscriptionTypesRepo } from './subscription-types.repo';
 import { CreateSubscriptionTypeDto } from './dto/create-subscription-type.dto';
 import { SubscriptionTypeModel } from './models/subscription-type.model';
 import { MongooseUtils } from '../common/utils/mongoose.utils';
+import { ProductModel } from '../products/models/product.model';
 
 @Injectable()
 export class SubscriptionTypesService {
   constructor(private readonly subscriptionTypesRepo: SubscriptionTypesRepo) {}
 
-  async findAll(): Promise<SubscriptionTypeModel[]> {
+  async findAll(productId?: string): Promise<SubscriptionTypeModel[]> {
+    if (productId) {
+      return this.findByProductId(productId);
+    }
     const subscriptionTypes = await this.subscriptionTypesRepo.findAll();
     return subscriptionTypes.map(type => SubscriptionTypeModel.fromEntity(type));
   }
@@ -53,5 +57,18 @@ export class SubscriptionTypesService {
     }
     
     await this.subscriptionTypesRepo.delete(id);
+  }
+
+  async findProductById(id: string): Promise<ProductModel> {
+    const product = await this.subscriptionTypesRepo.findById(id);
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+    return ProductModel.fromEntity(product);
+  }
+
+  async findByStatus(status: string): Promise<SubscriptionTypeModel[]> {
+    const subscriptionTypes = await this.subscriptionTypesRepo.findByStatus(status);
+    return subscriptionTypes.map(type => SubscriptionTypeModel.fromEntity(type));
   }
 } 

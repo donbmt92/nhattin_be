@@ -336,7 +336,7 @@ export class ProductsService {
     
     // Lấy danh sách thời hạn gói đăng ký của sản phẩm
     const subscriptionDurations = await this.subscriptionDurationsService.findByProductId(id);
-    
+     
     return {
       ...product,
       subscription_types: subscriptionTypes,
