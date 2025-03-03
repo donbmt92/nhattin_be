@@ -32,7 +32,7 @@ export class SubscriptionDurationsController {
     if (productId) {
       return this.subscriptionDurationsService.findByProductId(productId);
     }
-    return this.subscriptionDurationsService.findAll(productId);
+    return this.subscriptionDurationsService.findAll();
   }
 
   @Get(':id')

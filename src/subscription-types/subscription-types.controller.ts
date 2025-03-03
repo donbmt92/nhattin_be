@@ -35,7 +35,7 @@ export class SubscriptionTypesController {
       return this.subscriptionTypesService.findByProductId(productId);
     }
     this.logger.log('Finding all subscription types without product_id');
-    return this.subscriptionTypesService.findAll(productId);
+    return this.subscriptionTypesService.findAll();
   }
 
   @Get(':id')

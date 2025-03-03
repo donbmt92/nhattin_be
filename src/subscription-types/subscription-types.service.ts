@@ -10,10 +10,7 @@ import { ProductModel } from '../products/models/product.model';
 export class SubscriptionTypesService {
   constructor(private readonly subscriptionTypesRepo: SubscriptionTypesRepo) {}
 
-  async findAll(productId?: string): Promise<SubscriptionTypeModel[]> {
-    if (productId) {
-      return this.findByProductId(productId);
-    }
+  async findAll(): Promise<SubscriptionTypeModel[]> {
     const subscriptionTypes = await this.subscriptionTypesRepo.findAll();
     return subscriptionTypes.map(type => SubscriptionTypeModel.fromEntity(type));
   }
