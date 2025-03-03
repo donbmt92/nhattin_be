@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { SubscriptionDuration, SubscriptionDurationDocument } from './schemas/subscription-duration.schema';
 import { CreateSubscriptionDurationDto } from './dto/create-subscription-duration.dto';
 
@@ -20,7 +20,11 @@ export class SubscriptionDurationsRepo {
   }
 
   async findByProductId(productId: string): Promise<SubscriptionDurationDocument[]> {
-    return this.subscriptionDurationModel.find({ product_id: productId }).exec();
+    const query = { product_id: new Types.ObjectId(productId) };
+    console.log('Executing Query:', query);
+    const results = await this.subscriptionDurationModel.find(query).exec();
+    console.log('Query Results:', results);
+    return results;
   }
 
   async create(createSubscriptionDurationDto: CreateSubscriptionDurationDto): Promise<SubscriptionDurationDocument> {

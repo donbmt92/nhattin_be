@@ -8,11 +8,22 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../users/enum/role.enum';
+import { Logger } from '@nestjs/common';
 
 @ApiTags('subscription-durations')
 @Controller('subscription-durations')
 export class SubscriptionDurationsController {
+  private readonly logger = new Logger(SubscriptionDurationsController.name);
+
   constructor(private readonly subscriptionDurationsService: SubscriptionDurationsService) {}
+
+  @Get('product/:product_id')
+  @ApiOperation({ summary: 'Lấy danh sách thời hạn gói đăng ký theo product_id' })
+  @ApiResponse({ status: 200, description: 'Danh sách thời hạn gói đăng ký', type: [SubscriptionDurationModel] })
+  async findByProductId(@Param('product_id') productId: string): Promise<SubscriptionDurationModel[]> {
+    this.logger.log(`Finding subscription durations by product_id: ${productId}`);
+    return this.subscriptionDurationsService.findByProductId(productId);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách tất cả thời hạn gói đăng ký' })
@@ -21,7 +32,7 @@ export class SubscriptionDurationsController {
     if (productId) {
       return this.subscriptionDurationsService.findByProductId(productId);
     }
-    return this.subscriptionDurationsService.findAll();
+    return this.subscriptionDurationsService.findAll(productId);
   }
 
   @Get(':id')

@@ -9,7 +9,10 @@ import { MongooseUtils } from '../common/utils/mongoose.utils';
 export class SubscriptionDurationsService {
   constructor(private readonly subscriptionDurationsRepo: SubscriptionDurationsRepo) {}
 
-  async findAll(): Promise<SubscriptionDurationModel[]> {
+  async findAll(productId?: string): Promise<SubscriptionDurationModel[]> {
+    if (productId) {
+      return this.findByProductId(productId);
+    }
     const subscriptionDurations = await this.subscriptionDurationsRepo.findAll();
     return subscriptionDurations.map(duration => SubscriptionDurationModel.fromEntity(duration));
   }
