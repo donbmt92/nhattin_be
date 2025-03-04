@@ -6,6 +6,8 @@ import { User } from '../common/meta/user.meta';
 import { CartsService } from './carts.service';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
+import { Role } from 'src/users/enum/role.enum';
+import { Roles } from 'src/common/meta/role.meta';
 
 const CART_RESPONSE = {
   type: 'object',
@@ -42,6 +44,7 @@ export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
 
   @Post()
+  @Roles(Role.USER)
   @ApiOperation({ 
     summary: 'Thêm sản phẩm vào giỏ hàng',
     description: 'Thêm một sản phẩm mới vào giỏ hàng hoặc cập nhật số lượng nếu sản phẩm đã tồn tại'
@@ -78,8 +81,10 @@ export class CartsController {
     status: 404,
     description: 'Không tìm thấy sản phẩm'
   })
-  addToCart(@User('_id') userId: string, @Body() createCartDto: CreateCartDto) {
-    return this.cartsService.addToCart(userId, createCartDto);
+  addToCart(@User() user: any, @Body() createCartDto: CreateCartDto) {
+    console.log('User ID:', user);
+    console.log('Create Cart DTO:', createCartDto);
+    return this.cartsService.addToCart(user.sub, createCartDto);
   }
 
   @Get()

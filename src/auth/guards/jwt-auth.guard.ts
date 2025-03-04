@@ -49,6 +49,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       console.log('JWT Auth Failed:', err);
       throw err || new UnauthorizedException('Xác thực thất bại - Token không hợp lệ hoặc đã hết hạn');
     }
-    return user;
+    
+    // Log the user ID extracted from the token
+    console.log('Extracted User ID:', user._id);
+    
+    return user; // Ensure the user object is returned
   }
 }

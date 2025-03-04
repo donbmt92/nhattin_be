@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -15,4 +16,4 @@ export class Cart {
   quantity: number;
 }
 
-export const CartSchema = SchemaFactory.createForClass(Cart); 
+export const CartSchema = SchemaFactory.createForClass(Cart);
