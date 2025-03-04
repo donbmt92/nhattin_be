@@ -23,10 +23,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     // Skip JWT check for GET methods
     const request = context.switchToHttp().getRequest();
-    // const token = request.headers.authorization;
-    // console.log('Authorization Header:', token);
-    // console.log('Request:', request);
     // if (request.method === 'GET') {
+    //   console.log('GET method - Skipping JWT check');
     //   return true;
     // }
 
@@ -51,10 +49,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       console.log('JWT Auth Failed:', err);
       throw err || new UnauthorizedException('Xác thực thất bại - Token không hợp lệ hoặc đã hết hạn');
     }
-    
-    // Log the user ID extracted from the token
-    console.log('Extracted User ID:', user._id);
-    
-    return user; // Ensure the user object is returned
+    return user;
   }
 }

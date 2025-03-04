@@ -111,6 +111,7 @@ export class CartsController {
   }
 
   @Patch(':id')
+  @Roles(Role.USER, Role.ADMIN)
   @ApiOperation({ 
     summary: 'Cập nhật số lượng sản phẩm trong giỏ hàng',
     description: 'Cập nhật số lượng của một sản phẩm trong giỏ hàng. Nếu số lượng <= 0, sản phẩm sẽ bị xóa khỏi giỏ hàng'
