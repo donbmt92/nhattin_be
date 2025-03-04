@@ -162,6 +162,7 @@ export class CartsController {
   }
 
   @Delete(':id')
+  @Roles(Role.USER, Role.ADMIN)
   @ApiOperation({ 
     summary: 'Xóa sản phẩm khỏi giỏ hàng',
     description: 'Xóa một sản phẩm khỏi giỏ hàng của người dùng'
@@ -187,11 +188,13 @@ export class CartsController {
     status: 404,
     description: 'Không tìm thấy sản phẩm trong giỏ hàng'
   })
-  removeFromCart(@User('_id') userId: string, @Param('id') cartItemId: string) {
-    return this.cartsService.removeFromCart(userId, cartItemId);
+  removeFromCart(@User() userId: any, @Param('id') cartItemId: string) {
+    console.log('User ID:', userId);
+    return this.cartsService.removeFromCart(userId.sub, cartItemId);
   }
 
   @Delete()
+  @Roles(Role.USER, Role.ADMIN)
   @ApiOperation({ 
     summary: 'Xóa toàn bộ giỏ hàng',
     description: 'Xóa tất cả sản phẩm trong giỏ hàng của người dùng'
@@ -209,6 +212,7 @@ export class CartsController {
     description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
   })
   clearCart(@User('_id') userId: string) {
+    console.log('User ID:', userId);
     return this.cartsService.clearCart(userId);
   }
 }
