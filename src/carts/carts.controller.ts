@@ -88,6 +88,7 @@ export class CartsController {
   }
 
   @Get()
+  @Roles(Role.USER)
   @ApiOperation({ 
     summary: 'Xem giỏ hàng của người dùng',
     description: 'Lấy danh sách các sản phẩm trong giỏ hàng của người dùng hiện tại'
@@ -104,7 +105,8 @@ export class CartsController {
     status: 401,
     description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
   })
-  getUserCart(@User('_id') userId: string) {
+  getUserCart(@User('_id') userId: any) {
+    console.log('User ID:', userId);
     return this.cartsService.getUserCart(userId);
   }
 
@@ -150,10 +152,11 @@ export class CartsController {
     description: 'Không tìm thấy sản phẩm trong giỏ hàng'
   })
   updateCartItem(
-    @User('_id') userId: string,
+    @User('sub') userId: any,
     @Param('id') cartItemId: string,
     @Body() updateCartDto: UpdateCartDto,
   ) {
+    console.log('User ID:', userId);
     return this.cartsService.updateCartItem(userId, cartItemId, updateCartDto);
   }
 

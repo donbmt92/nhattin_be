@@ -23,10 +23,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     // Skip JWT check for GET methods
     const request = context.switchToHttp().getRequest();
-    if (request.method === 'GET') {
-      console.log('GET method - Skipping JWT check');
-      return true;
-    }
+    // const token = request.headers.authorization;
+    // console.log('Authorization Header:', token);
+    // console.log('Request:', request);
+    // if (request.method === 'GET') {
+    //   return true;
+    // }
 
     // Check for roles decorator
     const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());
