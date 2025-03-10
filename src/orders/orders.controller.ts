@@ -1,8 +1,12 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { User } from '../common/meta/user.meta';
+import { Roles } from '../common/meta/role.meta';
+import { Role } from '../users/enum/role.enum';
+import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
 
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -50,6 +54,38 @@ const CREATE_ORDER_RESPONSE = {
       description: 'Trạng thái đơn hàng',
       enum: Object.values(OrderStatus),
       example: OrderStatus.PENDING
+    },
+    items: {
+      type: 'array',
+      description: 'Danh sách sản phẩm trong đơn hàng',
+      items: {
+        type: 'object',
+        properties: {
+          id: { 
+            type: 'string',
+            description: 'ID của item trong đơn hàng'
+          },
+          product: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', description: 'ID của sản phẩm' },
+              name: { type: 'string', description: 'Tên sản phẩm' },
+              price: { type: 'number', description: 'Giá sản phẩm' },
+              images: { 
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Danh sách hình ảnh sản phẩm'
+              },
+              description: { type: 'string', description: 'Mô tả sản phẩm' }
+            }
+          },
+          quantity: { type: 'number', description: 'Số lượng sản phẩm' },
+          discount_precent: { type: 'number', description: 'Phần trăm giảm giá' },
+          old_price: { type: 'number', description: 'Giá gốc sản phẩm' },
+          price: { type: 'number', description: 'Giá sau khi giảm giá' },
+          subtotal: { type: 'number', description: 'Tổng giá trị của sản phẩm' }
+        }
+      }
     },
     createdAt: {
       type: 'string',
@@ -105,6 +141,7 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @Roles(Role.USER)
   @ApiOperation({ 
     summary: 'Tạo đơn hàng từ giỏ hàng', 
     description: 'Chuyển đổi sản phẩm từ giỏ hàng thành đơn hàng mới. Quá trình này sẽ:\n' +
@@ -147,7 +184,8 @@ export class OrdersController {
       '- Phương thức thanh toán không tồn tại\n' +
       '- Voucher không tồn tại'
   })
-  create(@User('_id') userId: string, @Body() createOrderDto: CreateOrderDto) {
+  create(@User('sub') userId: any, @Body() createOrderDto: CreateOrderDto) {
+    console.log('create', userId, createOrderDto);
     return this.ordersService.createFromCart(userId, createOrderDto);
   }
 
@@ -254,5 +292,92 @@ export class OrdersController {
   })
   remove(@Param('id') id: string) {
     return this.ordersService.remove(id);
+  }
+
+  @Get(':id/items')
+  @Roles(Role.USER, Role.ADMIN)
+  @ApiOperation({ 
+    summary: 'Lấy danh sách sản phẩm trong đơn hàng',
+    description: 'Lấy danh sách các sản phẩm đã đặt mua trong một đơn hàng cụ thể'
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID của đơn hàng',
+    type: String,
+    example: '65abc123def456'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách sản phẩm trong đơn hàng',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'ID của item trong đơn hàng' },
+          product: { type: 'object', description: 'Thông tin sản phẩm' },
+          quantity: { type: 'number', description: 'Số lượng sản phẩm' },
+          discount_precent: { type: 'number', description: 'Phần trăm giảm giá' },
+          old_price: { type: 'number', description: 'Giá gốc sản phẩm' },
+          price: { type: 'number', description: 'Giá sau khi giảm giá' },
+          subtotal: { type: 'number', description: 'Tổng giá trị của sản phẩm' }
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Không tìm thấy đơn hàng'
+  })
+  async getOrderItems(@Param('id') id: string) {
+    try {
+      // First check if the order exists
+      await this.ordersService.findOne(id);
+      
+      // If order exists, get its items
+      return this.ordersService.getOrderItems(id);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Không thể lấy danh sách sản phẩm trong đơn hàng');
+    }
+  }
+
+  @Get('user/my-orders')
+  @Roles(Role.USER)
+  @ApiOperation({ 
+    summary: 'Lấy danh sách đơn hàng của người dùng hiện tại',
+    description: 'Lấy danh sách tất cả đơn hàng của người dùng đã đăng nhập'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách đơn hàng của người dùng',
+    schema: {
+      type: 'array',
+      items: CREATE_ORDER_RESPONSE
+    }
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
+  })
+  async getMyOrders(@User() user: any) {
+    try {
+      if (!user || !user._id) {
+        throw new UnauthorizedException('Không thể xác thực người dùng');
+      }
+      return this.ordersService.findByUser(user._id);
+    } catch (error) {
+      console.error('Error fetching user orders:', error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Không thể lấy danh sách đơn hàng');
+    }
   }
 } 

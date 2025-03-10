@@ -1,4 +1,5 @@
-import { IsMongoId, IsNumber, IsString, IsOptional, Min, IsEnum } from 'class-validator';
+/* eslint-disable prettier/prettier */
+import { IsMongoId, IsNumber, IsString, IsOptional, Min, IsEnum, IsArray, ValidateNested } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { OrderStatus } from '../enum/order-status.enum';
 
@@ -25,4 +26,10 @@ export class CreateOrderDto {
   @ApiProperty({ description: 'Trạng thái đơn hàng', enum: OrderStatus })
   @IsEnum(OrderStatus)
   status: OrderStatus;
+
+  // @ApiProperty({ description: 'Danh sách sản phẩm trong đơn hàng' })
+  // @IsArray()
+  // @ValidateNested({ each: true })
+  // @Type(() => OrderItemDto)
+  // items: OrderItemDto[];
 } 

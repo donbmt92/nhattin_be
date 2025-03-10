@@ -98,7 +98,7 @@ export class ProductsController {
     }
     
     const products = await this.productsService.findAll();
-    console.log('All products:', products);
+    // console.log('All products:', products);
     return products;
   }
 

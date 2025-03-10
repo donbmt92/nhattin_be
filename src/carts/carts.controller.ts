@@ -42,9 +42,8 @@ const CART_RESPONSE = {
 @UseGuards(JwtAuthGuard)
 export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
-
   @Post()
-  @Roles(Role.USER)
+  @Roles(Role.USER, Role.ADMIN)
   @ApiOperation({ 
     summary: 'Thêm sản phẩm vào giỏ hàng',
     description: 'Thêm một sản phẩm mới vào giỏ hàng hoặc cập nhật số lượng nếu sản phẩm đã tồn tại'

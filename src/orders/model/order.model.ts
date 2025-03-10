@@ -8,6 +8,8 @@ export class OrderModel extends BaseModel {
   note: string;
   total: number;
   voucher?: string;
+  //item
+  items: any[];
   status: OrderStatus;
 
   constructor(order: any) {
@@ -18,6 +20,7 @@ export class OrderModel extends BaseModel {
     this.total = order.total;
     this.voucher = order.voucher;
     this.status = order.status;
+    this.items = order.items;
   }
 
   static fromEntity(entity: any): OrderModel {
@@ -28,13 +31,14 @@ export class OrderModel extends BaseModel {
       note: entity.note,
       total: entity.total,
       voucher: entity.voucher,
+      items: entity.items,
       status: entity.status,
       createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
+      updatedAt: entity.updatedAt
     });
   }
 
   static fromEntities(entities: any[]): OrderModel[] {
-    return entities.map(entity => OrderModel.fromEntity(entity));
+    return entities.map((entity) => OrderModel.fromEntity(entity));
   }
 }

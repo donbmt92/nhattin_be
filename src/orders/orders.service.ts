@@ -20,26 +20,28 @@ export class OrdersService {
     private readonly inventoryService: InventoryService,
   ) {}
 
-  async createFromCart(userId: string, createOrderDto: CreateOrderDto): Promise<OrderModel> {
+  async createFromCart(userId: string, createOrderDto: CreateOrderDto): Promise<any> {
     try {
-      // 1. Get user's cart with populated product details
-      const cartItems = await this.cartsService.getUserCart(userId);
-      if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+      // 1. Get cart items
+      const cartItems = await this.cartsService.getUserCart(userId) as any[];
+      if (!cartItems || cartItems.length === 0) {
         throw new BadRequestException('Giỏ hàng trống');
       }
 
       // 2. Create order
       const order = new this.orderModel({
-        uid: new Types.ObjectId(userId),
-        id_payment: createOrderDto.id_payment ? new Types.ObjectId(createOrderDto.id_payment) : undefined,
+        uid: userId,
+        id_payment: createOrderDto.id_payment,
+        voucher: createOrderDto.voucher,
         total: 0,
         status: 'pending',
-        note: createOrderDto.note,
+        note: createOrderDto.note || 'Không có ghi chú',
       });
 
       const savedOrder = await order.save();
       let totalAmount = 0;
-
+      const orderItems = [];
+      console.log(cartItems);
       // 3. Create order items and update inventory
       for (const cartItem of cartItems) {
         // Ensure product details are populated
@@ -51,38 +53,75 @@ export class OrdersService {
         const quantity = cartItem.quantity;
 
         // Check inventory availability
-        await this.inventoryService.checkAndReduceInventory(product._id, quantity);
-
+        // await this.inventoryService.checkAndReduceInventory(product._id, quantity);
+        console.log(savedOrder._id, product._id, quantity, product.price, product.discount?.discount_precent);
+        
         // Create order item
         const orderItem = new this.orderItemModel({
           id_order: savedOrder._id,
           id_product: product._id,
           quantity: quantity,
           discount_precent: product.discount?.discount_precent || 0,
-          old_price: product.price,
+          old_price: product.price || 0,
         });
 
-        await orderItem.save();
+        const savedOrderItem = await orderItem.save();
+
+        // Add to orderItems array with product details
+        orderItems.push({
+          id: savedOrderItem._id,
+          product: {
+            _id: product._id,
+            name: product.name,
+            price: product.price,
+            images: product.images,
+            description: product.description
+          },
+          quantity: quantity,
+          discount_precent: product.discount?.discount_precent || 0,
+          old_price: product.price || 0,
+          price: product.price * (1 - (product.discount?.discount_precent || 0) / 100),
+          subtotal: quantity * product.price * (1 - (product.discount?.discount_precent || 0) / 100)
+        });
 
         // Calculate total
-        const itemPrice = product.price * quantity * (1 - (product.discount?.discount_precent || 0) / 100);
-        totalAmount += itemPrice;
+        const productPrice = product.price || 0;
+        const discountPercent = product.discount?.discount_precent || 0;
+        const itemPrice = productPrice * quantity * (1 - discountPercent / 100);
+        
+        // Ensure itemPrice is a valid number
+        if (!isNaN(itemPrice)) {
+          totalAmount += itemPrice;
+        } else {
+          console.error('Invalid item price calculation:', { productPrice, quantity, discountPercent });
+        }
       }
 
       // 4. Update order total
+      // Ensure totalAmount is a valid number
+      if (isNaN(totalAmount)) {
+        totalAmount = 0;
+        console.error('Total amount is NaN, setting to 0');
+      }
+      
       savedOrder.total = totalAmount;
       await savedOrder.save();
 
-      // 5. Clear the cart
+      // 5. Clear cart
       await this.cartsService.clearCart(userId);
 
-      return OrderModel.fromEntity(savedOrder);
+      // 6. Return order with items
+      const orderModel = OrderModel.fromEntity(savedOrder);
+      return {
+        ...orderModel,
+        items: orderItems
+      };
     } catch (error) {
-      // If any error occurs, rollback the order
+      console.error('Error creating order from cart:', error);
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Không thể tạo đơn hàng: ' + error.message);
+      throw new Error('Không thể tạo đơn hàng: ' + error.message);
     }
   }
 
@@ -146,5 +185,35 @@ export class OrdersService {
     }
 
     return OrderModel.fromEntity(deletedOrder);
+  }
+
+  async getOrderItems(orderId: string): Promise<any[]> {
+    try {
+      // Find all order items for the given order ID
+      const orderItems = await this.orderItemModel.find({ id_order: orderId })
+        .populate({
+          path: 'id_product',
+          select: 'name price images description'
+        })
+        .exec();
+      
+      if (!orderItems || orderItems.length === 0) {
+        return [];
+      }
+      
+      // Transform the order items to include product details
+      return orderItems.map(item => ({
+        id: item._id,
+        product: item.id_product,
+        quantity: item.quantity,
+        discount_precent: item.discount_precent,
+        old_price: item.old_price,
+        price: item.old_price * (1 - item.discount_precent / 100),
+        subtotal: item.quantity * item.old_price * (1 - item.discount_precent / 100)
+      }));
+    } catch (error) {
+      console.error('Error fetching order items:', error);
+      throw new Error('Không thể lấy danh sách sản phẩm trong đơn hàng');
+    }
   }
 } 
