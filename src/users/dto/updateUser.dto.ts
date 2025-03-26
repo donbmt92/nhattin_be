@@ -64,4 +64,13 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   password?: string;
+
+  @ApiProperty({
+    description: 'Ảnh đại diện người dùng',
+    type: String,
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  image?: string;
 } 

@@ -23,6 +23,8 @@ import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { PostsModule } from './posts/posts.module';
+import { PostCategoriesModule } from './post-categories/post-categories.module';
 
 const ENV = process.env.NODE_ENV;
 
@@ -32,8 +34,11 @@ const ENV = process.env.NODE_ENV;
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads/'
     }),
-    ConfigModule.forRoot({ envFilePath: !ENV ? '.env' : `.env.${ENV}` }),
-    MongooseModule.forRoot(process.env.MONGOURL, {
+    ConfigModule.forRoot({ 
+      envFilePath: !ENV ? '.env' : `.env.${ENV}`,
+      isGlobal: true 
+    }),
+    MongooseModule.forRoot(process.env.MONGODB_URI || process.env.MONGOURL, {
       dbName: process.env.DATABASE,
       connectionFactory: (connection) => {
         console.log(`Connected to database: ${process.env.DATABASE}`);
@@ -57,7 +62,9 @@ const ENV = process.env.NODE_ENV;
     CategoriesModule,
     SubscriptionTypesModule,
     SubscriptionDurationsModule,
-    SubscriptionsModule
+    SubscriptionsModule,
+    PostsModule,
+    PostCategoriesModule
   ],
   controllers: [],
   providers: [

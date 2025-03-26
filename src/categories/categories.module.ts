@@ -5,6 +5,7 @@ import { Category, CategorySchema } from './schemas/category.schema';
 import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
 import { CategoriesRepo } from './categories.repo';
+import { CloudinaryService } from '../upload/cloudinary.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { CategoriesRepo } from './categories.repo';
     ])
   ],
   controllers: [CategoriesController],
-  providers: [CategoriesService, CategoriesRepo],
+  providers: [CategoriesService, CategoriesRepo, CloudinaryService],
   exports: [CategoriesService]
 })
 export class CategoriesModule {} 

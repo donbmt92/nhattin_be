@@ -1,8 +1,7 @@
 /* eslint-disable prettier/prettier */
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsMongoId, IsString, IsNumber, Min, IsOptional, Length } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional } from 'class-validator';
 
 export class UpdateProductDto {
   @ApiProperty({ 
@@ -10,7 +9,6 @@ export class UpdateProductDto {
     example: '65abc123def456',
     required: false
   })
-  @IsMongoId()
   @IsOptional()
   id_category?: string;
 
@@ -19,7 +17,6 @@ export class UpdateProductDto {
     example: '65abc123def456',
     required: false
   })
-  @IsMongoId()
   @IsOptional()
   id_discount?: string;
 
@@ -28,7 +25,6 @@ export class UpdateProductDto {
     example: '65abc123def456',
     required: false
   })
-  @IsMongoId()
   @IsOptional()
   id_inventory?: string;
 
@@ -39,9 +35,7 @@ export class UpdateProductDto {
     maxLength: 100,
     required: false
   })
-  @IsString()
   @IsOptional()
-  @Length(3, 100)
   name?: string;
 
   @ApiProperty({ 
@@ -58,9 +52,16 @@ export class UpdateProductDto {
     example: 'Áo thun nam cotton 100%, form regular fit',
     required: false
   })
-  @IsString()
   @IsOptional()
   desc?: string;
+
+  @ApiProperty({ 
+    description: 'Mô tả sản phẩm',
+    example: 'Áo thun nam cotton 100%, form regular fit',
+    required: false
+  })
+  @IsOptional()
+  description?: string;
 
   @ApiProperty({ 
     description: 'Giá gốc sản phẩm (VND)',
@@ -69,10 +70,7 @@ export class UpdateProductDto {
     required: false,
     type: Number
   })
-  @IsNumber()
   @IsOptional()
-  @Min(0)
-  @Type(() => Number)
   base_price?: number;
 
   @ApiProperty({ 
@@ -82,10 +80,7 @@ export class UpdateProductDto {
     required: false,
     type: Number
   })
-  @IsNumber()
   @IsOptional()
-  @Min(0)
-  @Type(() => Number)
   min_price?: number;
 
   @ApiProperty({ 
@@ -95,9 +90,52 @@ export class UpdateProductDto {
     required: false,
     type: Number
   })
-  @IsNumber()
   @IsOptional()
-  @Min(0)
-  @Type(() => Number)
   max_price?: number;
+
+  @ApiProperty({ 
+    description: 'Điểm đánh giá trung bình',
+    example: 5.0,
+    minimum: 0,
+    maximum: 5,
+    required: false
+  })
+  @IsOptional()
+  rating?: number;
+
+  @ApiProperty({ 
+    description: 'Số lượng đánh giá',
+    example: 173,
+    minimum: 0,
+    required: false
+  })
+  @IsOptional()
+  total_reviews?: number;
+
+  @ApiProperty({ 
+    description: 'Số lượng đã bán',
+    example: 27268,
+    minimum: 0,
+    required: false
+  })
+  @IsOptional()
+  sold?: number;
+
+  @ApiProperty({ 
+    description: 'Chính sách bảo hành',
+    example: true,
+    type: Boolean,
+    required: false
+  })
+  @IsOptional()
+  warranty_policy?: boolean;
+
+  @ApiProperty({ 
+    description: 'Tình trạng sản phẩm',
+    enum: ['IN_STOCK', 'OUT_OF_STOCK'],
+    default: 'IN_STOCK',
+    required: false
+  })
+  @IsOptional()
+  status?: string;
 } 

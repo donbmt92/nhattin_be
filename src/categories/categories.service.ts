@@ -31,7 +31,7 @@ export class CategoriesService {
     if (!existingCategory) {
       throw new NotFoundException(`Category with ID ${id} not found`);
     }
-    
+    console.log(updateCategoryDto);
     const updatedCategory = await this.categoriesRepo.update(id, updateCategoryDto);
     return CategoryModel.fromEntity(updatedCategory);
   }

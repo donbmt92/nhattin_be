@@ -1,10 +1,21 @@
 /* eslint-disable prettier/prettier */
-import { IsMongoId, IsNumber, IsString, IsOptional, Min, IsEnum, IsArray, ValidateNested } from 'class-validator';
+import { IsMongoId, IsNumber, IsString, IsOptional, IsEnum, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { OrderStatus } from '../enum/order-status.enum';
 
+export class OrderItemDto {
+  @ApiProperty({ description: 'ID của sản phẩm' })
+  @IsMongoId()
+  id_product: string;
+
+  @ApiProperty({ description: 'Số lượng' })
+  @IsNumber()
+  quantity: number;
+}
+
 export class CreateOrderDto {
-  @ApiProperty({ description: 'ID của payment' })
+  @ApiProperty({ description: 'ID của payment', required: false })
   @IsMongoId()
   @IsOptional()
   id_payment?: string;
@@ -13,23 +24,18 @@ export class CreateOrderDto {
   @IsString()
   note: string;
 
-  @ApiProperty({ description: 'Tổng tiền', minimum: 0 })
-  @IsNumber()
-  @Min(0)
-  total: number;
-
-  @ApiProperty({ description: 'Mã voucher' })
+  @ApiProperty({ description: 'Mã voucher', required: false })
   @IsString()
   @IsOptional()
   voucher?: string;
 
-  @ApiProperty({ description: 'Trạng thái đơn hàng', enum: OrderStatus })
+  @ApiProperty({ description: 'Trạng thái đơn hàng', enum: OrderStatus, default: OrderStatus.PENDING })
   @IsEnum(OrderStatus)
-  status: OrderStatus;
+  @IsOptional()
+  status?: OrderStatus = OrderStatus.PENDING;
 
-  // @ApiProperty({ description: 'Danh sách sản phẩm trong đơn hàng' })
-  // @IsArray()
-  // @ValidateNested({ each: true })
-  // @Type(() => OrderItemDto)
-  // items: OrderItemDto[];
+  @ApiProperty({ description: 'Danh sách sản phẩm trong đơn hàng', type: [OrderItemDto] })
+  @IsArray()
+  @Type(() => OrderItemDto)
+  items: OrderItemDto[];
 } 

@@ -9,7 +9,8 @@ import {
   UseGuards,
   Query,
   UseInterceptors,
-  UploadedFile
+  UploadedFile,
+  Controller
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -21,7 +22,7 @@ import { Roles } from '../common/meta/role.meta';
 import { Role } from '../users/enum/role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
-import { multerConfig } from '../config/multer.config';
+import { memoryStorage } from 'multer';
 import {
   ApiTags,
   ApiOperation,
@@ -37,37 +38,89 @@ import { Product } from './schemas/product.schema';
 @ApiTags('Products')
 @ApiBearerAuth()
 @Control('products')
+@Controller()
 @UseGuards(RolesGuard)
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
   @Roles(Role.ADMIN)
-  @UseInterceptors(FileInterceptor('image', multerConfig))
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
   @ApiOperation({
     summary: 'Tạo mới sản phẩm',
     description: 'Tạo mới sản phẩm với thông tin cơ bản và hình ảnh'
   })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: CreateProductDto })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        id_category: { type: 'string' },
+        id_discount: { type: 'string' },
+        id_inventory: { type: 'string' },
+        base_price: { type: 'number' },
+        min_price: { type: 'number' },
+        max_price: { type: 'number' },
+        warranty_policy: { type: 'boolean' },
+        status: { type: 'string', enum: ['IN_STOCK', 'OUT_OF_STOCK'] },
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 201,
-    description: 'Tạo sản phẩm thành công',
-    type: Product
+    description: 'Sản phẩm đã được tạo thành công'
   })
   @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
-  @ApiResponse({ status: 404, description: 'Không tìm thấy danh mục' })
   @Description('Tạo mới sản phẩm', [
-    { status: 201, description: 'Tạo thành công' },
-    { status: 404, description: 'Không tìm thấy danh mục' }
+    { status: 201, description: 'Sản phẩm đã được tạo thành công' }
   ])
   create(
     @Body() createProductDto: CreateProductDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return this.productsService.create(createProductDto, file);
+  }
+
+  @Post('upload-image/:id')
+  @Roles(Role.ADMIN)
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
+  @ApiOperation({
+    summary: 'Upload ảnh cho sản phẩm',
+    description: 'Upload hoặc cập nhật ảnh cho sản phẩm sử dụng Cloudinary'
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({ name: 'id', description: 'ID của sản phẩm' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Ảnh sản phẩm đã được cập nhật thành công'
+  })
+  @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
+  @Description('Upload ảnh cho sản phẩm', [
+    { status: 200, description: 'Ảnh sản phẩm đã được cập nhật thành công' }
+  ])
+  uploadImage(
+    @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File
   ) {
-    console.log(createProductDto);
-
-    return this.productsService.create(createProductDto, file);
+    return this.productsService.updateProductImage(id, file);
   }
 
   @Get()
@@ -98,8 +151,30 @@ export class ProductsController {
     }
     
     const products = await this.productsService.findAll();
-    // console.log('All products:', products);
     return products;
+  }
+
+  @Get('search/by-category-name')
+  @ApiOperation({
+    summary: 'Tìm sản phẩm theo tên danh mục',
+    description: 'Tìm kiếm sản phẩm dựa trên tên của danh mục'
+  })
+  @ApiQuery({
+    name: 'categoryName',
+    required: true,
+    type: String,
+    description: 'Tên danh mục cần tìm'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách sản phẩm theo danh mục'
+  })
+  @Description('Tìm sản phẩm theo tên danh mục', [
+    { status: 200, description: 'Danh sách sản phẩm theo danh mục' },
+    { status: 404, description: 'Không tìm thấy danh mục' }
+  ])
+  findByCategoryName(@Query('categoryName') categoryName: string) {
+    return this.productsService.findByCategoryName(categoryName);
   }
 
   @Get(':id')
@@ -128,38 +203,48 @@ export class ProductsController {
 
   @Put(':id')
   @Roles(Role.ADMIN)
-  @UseInterceptors(FileInterceptor('image', multerConfig))
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
   @ApiOperation({
     summary: 'Cập nhật sản phẩm',
-    description: 'Cập nhật thông tin sản phẩm theo ID'
+    description: 'Cập nhật thông tin sản phẩm với ID cụ thể'
   })
-  @ApiParam({
-    name: 'id',
-    description: 'ID của sản phẩm cần cập nhật',
-    example: '65abc123def456'
-  })
+  @ApiParam({ name: 'id', description: 'ID của sản phẩm' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UpdateProductDto })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        id_category: { type: 'string' },
+        id_discount: { type: 'string' },
+        id_inventory: { type: 'string' },
+        base_price: { type: 'number' },
+        min_price: { type: 'number' },
+        max_price: { type: 'number' },
+        warranty_policy: { type: 'boolean' },
+        status: { type: 'string', enum: ['IN_STOCK', 'OUT_OF_STOCK'] },
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
-    description: 'Cập nhật thành công',
-    type: Product
+    description: 'Sản phẩm đã được cập nhật thành công'
   })
   @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
-  @ApiResponse({
-    status: 404,
-    description: 'Không tìm thấy sản phẩm hoặc danh mục'
-  })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
   @Description('Cập nhật sản phẩm', [
-    { status: 200, description: 'Cập nhật thành công' },
-    { status: 404, description: 'Không tìm thấy sản phẩm hoặc danh mục' }
+    { status: 200, description: 'Product updated' }
   ])
   update(
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
-    @UploadedFile() file: Express.Multer.File
+    @UploadedFile() file?: Express.Multer.File
   ) {
-    console.log('update', id, updateProductDto, file);
     return this.productsService.update(id, updateProductDto, file);
   }
 

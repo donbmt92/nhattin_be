@@ -23,6 +23,24 @@ export class PaymentDetail {
 
   @Prop({ required: true })
   status: string;
+
+  @Prop({ type: Number, required: true })
+  amount: number;
+
+  @Prop({ type: Boolean, default: false })
+  is_bank_transfer: boolean;
+
+  @Prop({ type: String, required: false })
+  bank_name: string;
+
+  @Prop({ type: String, required: false })
+  transaction_reference: string;
+
+  @Prop({ type: Date, required: false })
+  transfer_date: Date;
+
+  @Prop({ type: String, required: false })
+  transfer_note: string;
 }
 
 export const PaymentDetailSchema = SchemaFactory.createForClass(PaymentDetail);

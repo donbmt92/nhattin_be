@@ -8,6 +8,9 @@ import { ImageModule } from '../image/image.module';
 import { UsersModule } from '../users/users.module';
 import { SubscriptionTypesModule } from '../subscription-types/subscription-types.module';
 import { SubscriptionDurationsModule } from '../subscription-durations/subscription-durations.module';
+import { UploadModule } from '../upload/upload.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 @Module({
   imports: [
@@ -16,7 +19,11 @@ import { SubscriptionDurationsModule } from '../subscription-durations/subscript
     ImageModule,
     UsersModule,
     SubscriptionTypesModule,
-    SubscriptionDurationsModule
+    SubscriptionDurationsModule,
+    MulterModule.register({
+      storage: memoryStorage(),
+    }),
+    UploadModule,
   ],
   controllers: [ProductsController],
   providers: [ProductsService],

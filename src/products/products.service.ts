@@ -10,13 +10,13 @@ import { Product, ProductDocument } from './schemas/product.schema';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductModel } from './model/product.model';
-import { MessengeCode } from '../common/exception/MessengeCode';
 import { CategoryService } from '../category/category.service';
 import { ImageService } from '../image/image.service';
-import { CreateImageDto } from '../image/dto/create-image.dto';
 import { SubscriptionTypesService } from '../subscription-types/subscription-types.service';
 import { SubscriptionDurationsService } from '../subscription-durations/subscription-durations.service';
 import { MongooseUtils } from '../common/utils/mongoose.utils';
+import { CloudinaryService } from '../upload/cloudinary.service';
+import { Category, CategoryDocument } from '../category/schemas/category.schema';
 
 @Injectable()
 export class ProductsService {
@@ -25,12 +25,13 @@ export class ProductsService {
     private readonly categoryService: CategoryService,
     private readonly imageService: ImageService,
     private readonly subscriptionTypesService: SubscriptionTypesService,
-    private readonly subscriptionDurationsService: SubscriptionDurationsService
+    private readonly subscriptionDurationsService: SubscriptionDurationsService,
+    private readonly cloudinaryService: CloudinaryService
   ) {}
 
   async create(
     createProductDto: CreateProductDto,
-    file: Express.Multer.File
+    file?: Express.Multer.File
   ): Promise<ProductModel> {
     try {
       // Chuyển đổi string ID sang ObjectId
@@ -55,37 +56,21 @@ export class ProductsService {
         throw new BadRequestException('ID kho hàng không hợp lệ');
       }
 
-      // Check if category exists
-      await this.categoryService.findOne(data.id_category);
-
-      // Validate and save file
-      if (!file) {
-        throw new BadRequestException('File ảnh là bắt buộc');
+      // Upload ảnh lên Cloudinary nếu có
+      if (file) {
+        const imageUrl = await this.cloudinaryService.uploadImage(file, 'products');
+        data.image = imageUrl;
       }
 
-      // Save image first
-      const savedImage = await this.imageService.create(
-        { type: 'product' } as CreateImageDto,
-        file
-      );
+      // Tạo sản phẩm mới
+      const newProduct = new this.productModel(data);
+      const savedProduct = await newProduct.save();
 
-      // Create product with validated ObjectIds and saved image
-      const createdProduct = new this.productModel({
-        ...data,
-        image: savedImage.link,
-        thumbnail: savedImage.thumbnail
-      });
-
-      const savedProduct = await createdProduct.save();
-      return ProductModel.fromEntity(savedProduct);
+      return new ProductModel(savedProduct);
     } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      if (error === MessengeCode.PRODUCT.NOT_FOUND) {
-        throw new NotFoundException('Không tìm thấy danh mục');
-      }
-      throw new BadRequestException('Không thể tạo sản phẩm: ' + error.message);
+      throw new BadRequestException(
+        `Không thể tạo sản phẩm: ${error.message}`
+      );
     }
   }
 
@@ -109,6 +94,7 @@ export class ProductsService {
 
   async findOne(id: string): Promise<ProductModel> {
     try {
+      console.log(id);
       if (!isValidObjectId(id)) {
         throw new BadRequestException('ID sản phẩm không hợp lệ');
       }
@@ -167,16 +153,11 @@ export class ProductsService {
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
-    file: Express.Multer.File
+    file?: Express.Multer.File
   ): Promise<ProductModel> {
     try {
       // Chuyển đổi string ID sang ObjectId
       const updateData = MongooseUtils.convertToObjectIds(updateProductDto);
-
-      // Validate product ID
-      if (!isValidObjectId(id)) {
-        throw new BadRequestException('ID sản phẩm không hợp lệ');
-      }
 
       // Get existing product
       const existingProduct = await this.productModel.findById(id);
@@ -206,38 +187,22 @@ export class ProductsService {
         throw new BadRequestException('ID kho hàng không hợp lệ');
       }
 
-      // Check if category exists if provided
-      if (updateData.id_category) {
-        await this.categoryService.findOne(updateData.id_category);
-      }
-
       // Handle file update
-      let imagePath = existingProduct.image;
-      let thumbnailPath = existingProduct.thumbnail;
       if (file) {
-        // Save new image
-        const savedImage = await this.imageService.create(
-          { type: 'product' } as CreateImageDto,
-          file
-        );
-        imagePath = savedImage.link;
-        thumbnailPath = savedImage.thumbnail;
+        // Xóa ảnh cũ nếu tồn tại và là ảnh Cloudinary
+        if (existingProduct.image && existingProduct.image.includes('cloudinary')) {
+          const publicId = this.cloudinaryService.getPublicIdFromUrl(existingProduct.image);
+          await this.cloudinaryService.deleteImage(publicId);
+        }
+        
+        // Upload ảnh mới
+        const imageUrl = await this.cloudinaryService.uploadImage(file, 'products');
+        updateData.image = imageUrl;
       }
 
       // Prepare update data
       const updateDataFinal = {
-        ...updateData,
-        id_category: updateData.id_category
-          ? new Types.ObjectId(updateData.id_category)
-          : undefined,
-        id_discount: updateData.id_discount
-          ? new Types.ObjectId(updateData.id_discount)
-          : undefined,
-        id_inventory: updateData.id_inventory
-          ? new Types.ObjectId(updateData.id_inventory)
-          : undefined,
-        image: imagePath,
-        thumbnail: thumbnailPath
+        ...updateData
       };
 
       // Remove undefined fields
@@ -246,14 +211,14 @@ export class ProductsService {
       );
 
       const updatedProduct = await this.productModel
-        .findByIdAndUpdate(new Types.ObjectId(id), updateDataFinal, { new: true })
+        .findByIdAndUpdate(id, updateDataFinal, { new: true })
         .exec();
 
       if (!updatedProduct) {
         throw new NotFoundException('Không tìm thấy sản phẩm');
       }
 
-      return ProductModel.fromEntity(updatedProduct);
+      return new ProductModel(updatedProduct);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -262,14 +227,13 @@ export class ProductsService {
         throw error;
       }
       throw new BadRequestException(
-        'Không thể cập nhật sản phẩm: ' + error.message
+        `Không thể cập nhật sản phẩm: ${error.message}`
       );
     }
   }
 
   async remove(id: string): Promise<ProductModel> {
     try {
-      
       if (!isValidObjectId(id)) {
         throw new BadRequestException('ID sản phẩm không hợp lệ');
       }
@@ -279,20 +243,24 @@ export class ProductsService {
         throw new NotFoundException('Không tìm thấy sản phẩm');
       }
 
-      // Delete product image from images collection
-      if (product.image) {
-        await this.imageService.removeByLink(product.image);
+      // Xóa ảnh sản phẩm từ Cloudinary nếu tồn tại
+      if (product.image && product.image.includes('cloudinary')) {
+        const publicId = this.cloudinaryService.getPublicIdFromUrl(product.image);
+        await this.cloudinaryService.deleteImage(publicId);
       }
 
-      // Delete product
-      const deletedProduct = await this.productModel
-        .findByIdAndDelete(new Types.ObjectId(id))
-        .exec();
-      
-      return ProductModel.fromEntity(deletedProduct);
+      const deletedProduct = await this.productModel.findByIdAndDelete(id);
+      return new ProductModel(deletedProduct);
     } catch (error) {
-      console.log('Không thể xóa sản phẩm: ' + error);
-      throw new BadRequestException('Không thể xóa sản phẩm: ' + error.message);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Không thể xóa sản phẩm: ${error.message}`
+      );
     }
   }
 
@@ -342,5 +310,69 @@ export class ProductsService {
       subscription_types: subscriptionTypes,
       subscription_durations: subscriptionDurations
     };
+  }
+
+  async updateProductImage(id: string, file: Express.Multer.File): Promise<ProductModel> {
+    try {
+      const product = await this.findById(id);
+      
+      // Xóa ảnh cũ nếu tồn tại và là ảnh Cloudinary
+      if (product.image && product.image.includes('cloudinary')) {
+        const publicId = this.cloudinaryService.getPublicIdFromUrl(product.image);
+        await this.cloudinaryService.deleteImage(publicId);
+      }
+      
+      // Upload ảnh mới
+      const imageUrl = await this.cloudinaryService.uploadImage(file, 'products');
+      
+      // Cập nhật sản phẩm với URL ảnh mới
+      const updatedProduct = await this.productModel.findByIdAndUpdate(
+        id,
+        { image: imageUrl },
+        { new: true }
+      ).exec();
+      
+      return new ProductModel(updatedProduct);
+    } catch (error) {
+      throw new BadRequestException(
+        `Không thể cập nhật ảnh sản phẩm: ${error.message}`
+      );
+    }
+  }
+
+  async findByCategoryName(categoryName: string): Promise<ProductModel[]> {
+    try {
+      console.log(categoryName);
+      // Tìm category theo tên
+      const category = await this.categoryService.findByName(categoryName);
+      if (!category) {
+        throw new NotFoundException(`Không tìm thấy danh mục với tên: ${categoryName}`);
+      }
+
+      // Tìm tất cả sản phẩm thuộc category này
+      const products = await this.productModel.find({ id_category: (category as CategoryDocument)._id })
+        .populate('id_category')
+        .populate('id_discount')
+        .populate('id_inventory')
+        .exec();
+
+      return products.map(product => {
+        const productData = {
+          ...product.toObject(),
+          price: product.base_price,
+          desc: product.description
+        };
+        return ProductModel.fromEntity(productData);
+      });
+    } catch (error) {
+      console.log(error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new BadRequestException(
+        `Không thể tìm sản phẩm theo danh mục: ${error.message}`
+      );
+    }
   }
 }

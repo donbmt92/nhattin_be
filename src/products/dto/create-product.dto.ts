@@ -1,17 +1,6 @@
 /* eslint-disable prettier/prettier */
-import {
-  IsMongoId,
-  IsString,
-  IsOptional,
-  Length,
-  IsNumber,
-  Min,
-  Max,
-  IsBoolean,
-  IsEnum
-} from 'class-validator';
+import { IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { ProductStatus } from '../schemas/product.schema';
 
 export class CreateProductDto {
   @ApiProperty({
@@ -19,7 +8,6 @@ export class CreateProductDto {
     type: String,
     example: '65abc123def456'
   })
-  @IsMongoId()
   id_category: string;
 
   @ApiProperty({
@@ -28,7 +16,6 @@ export class CreateProductDto {
     example: '65abc123def456',
     required: false
   })
-  @IsMongoId()
   @IsOptional()
   id_discount?: string;
 
@@ -38,7 +25,6 @@ export class CreateProductDto {
     example: '65abc123def456',
     required: false
   })
-  @IsMongoId()
   @IsOptional()
   id_inventory?: string;
 
@@ -48,63 +34,56 @@ export class CreateProductDto {
     minLength: 3,
     maxLength: 100
   })
-  @IsString()
-  @Length(3, 100)
   name: string;
 
   @ApiProperty({
     description: 'Mô tả sản phẩm',
     example: 'Tài khoản Netflix Premium chất lượng cao, xem phim không giới hạn'
   })
-  @IsString()
   description: string;
 
   @ApiProperty({
     description: 'Đường dẫn hình ảnh gốc sản phẩm',
-    example: 'uploads/products/netflix-premium.jpg'
+    example: 'uploads/products/netflix-premium.jpg',
+    required: false
   })
   @IsOptional()
-  // @IsString()
-  image: string;
+  image?: string;
 
   @ApiProperty({
     description: 'Đường dẫn hình ảnh thumbnail sản phẩm',
     example: 'uploads/products/thumb_netflix-premium.jpg',
     required: false
   })
-  @IsString()
   @IsOptional()
   thumbnail?: string;
 
   @ApiProperty({
     description: 'Giá gốc sản phẩm (VND)',
     example: 299000,
-    minimum: 0
+    minimum: 0,
+    required: false
   })
-  // @IsNumber()
-  // @Min(0)
   @IsOptional()
-  base_price: number;
+  base_price?: number;
 
   @ApiProperty({
     description: 'Giá thấp nhất (VND)',
     example: 10000,
-    minimum: 0
+    minimum: 0,
+    required: false
   })
   @IsOptional()
-  // @IsNumber()
-  // @Min(0)
-  min_price: number;
+  min_price?: number;
 
   @ApiProperty({
     description: 'Giá cao nhất (VND)',
     example: 849000,
-    minimum: 0
+    minimum: 0,
+    required: false
   })
   @IsOptional()
-  // @IsNumber()
-  // @Min(0)
-  max_price: number;
+  max_price?: number;
 
   @ApiProperty({
     description: 'Điểm đánh giá trung bình',
@@ -113,9 +92,6 @@ export class CreateProductDto {
     maximum: 5,
     required: false
   })
-  @IsNumber()
-  @Min(0)
-  @Max(5)
   @IsOptional()
   rating?: number;
 
@@ -125,8 +101,6 @@ export class CreateProductDto {
     minimum: 0,
     required: false
   })
-  @IsNumber()
-  @Min(0)
   @IsOptional()
   total_reviews?: number;
 
@@ -136,8 +110,6 @@ export class CreateProductDto {
     minimum: 0,
     required: false
   })
-  // @IsNumber()
-  // @Min(0)
   @IsOptional()
   sold?: number;
 
@@ -147,17 +119,15 @@ export class CreateProductDto {
     type: Boolean,
     required: false
   })
-  // @IsBoolean()
   @IsOptional()
   warranty_policy?: boolean;
 
   @ApiProperty({
     description: 'Tình trạng sản phẩm',
-    enum: ProductStatus,
-    default: ProductStatus.IN_STOCK,
+    enum: ['IN_STOCK', 'OUT_OF_STOCK'],
+    default: 'IN_STOCK',
     required: false
   })
-  @IsEnum(ProductStatus)
   @IsOptional()
-  status?: ProductStatus;
+  status?: string;
 }

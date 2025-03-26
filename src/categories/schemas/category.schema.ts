@@ -30,6 +30,13 @@ export class Category {
   status: CategoryStatus;
 
   @ApiProperty({
+    description: 'URL hình ảnh danh mục',
+    example: 'https://res.cloudinary.com/example/image/upload/v1234567/categories/category1.jpg'
+  })
+  @Prop()
+  image?: string;
+
+  @ApiProperty({
     description: 'Thời gian tạo',
     example: '2024-03-20T03:00:00.000Z'
   })

@@ -16,6 +16,14 @@ export class CreateCategoryDto {
   name: string;
 
   @ApiProperty({
+    description: 'Loại danh mục',
+    example: 'NETFLIX',
+    required: true
+  })
+  @IsString()
+  type: string;
+
+  @ApiProperty({
     description: 'Trạng thái danh mục',
     enum: CategoryStatus,
     default: CategoryStatus.ACTIVE,
@@ -24,4 +32,13 @@ export class CreateCategoryDto {
   @IsEnum(CategoryStatus)
   @IsOptional()
   status?: CategoryStatus;
+
+  @ApiProperty({
+    description: 'URL hình ảnh danh mục',
+    example: 'https://res.cloudinary.com/example/image/upload/v1234567/categories/category1.jpg',
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  image?: string;
 } 

@@ -36,6 +36,12 @@ export class CategoryModel {
   })
   updatedAt: Date;
 
+  @ApiProperty({
+    description: 'URL hình ảnh danh mục',
+    example: 'https://res.cloudinary.com/example/image/upload/v1234567/categories/category1.jpg'
+  })
+  image?: string;
+
   constructor(partial: Partial<CategoryModel>) {
     Object.assign(this, partial);
     if (partial._id) {
@@ -51,7 +57,8 @@ export class CategoryModel {
       name: entity.name,
       status: entity.status,
       createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt
+      updatedAt: entity.updatedAt,
+      image: entity.image
     });
 
     return model;

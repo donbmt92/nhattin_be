@@ -48,6 +48,15 @@ export class CategoryService {
     return category;
   }
 
+  async findByName(name: string): Promise<Category> {
+    const category = await this.categoryModel.findOne({ name }).exec();
+    console.log(category);
+    if (!category) {
+      throw MessengeCode.CATEGORY.NOT_FOUND;
+    }
+    return category;
+  }
+
   async update(
     id: string,
     updateCategoryDto: UpdateCategoryDto

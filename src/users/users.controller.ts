@@ -9,6 +9,9 @@ import {
   Query,
   Inject,
   Param,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { Control } from 'src/common/meta/control.meta';
@@ -20,11 +23,14 @@ import { Role } from './enum/role.enum';
 import { User } from 'src/common/meta/user.meta';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Users')
 @Control('users')
 @Controller()
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(
     @Inject(UsersService) private readonly userService: UsersService,
@@ -32,14 +38,44 @@ export class UsersController {
 
   @Public()
   @Post('createUser')
+  @Roles(Role.USER)
   @ApiOperation({ summary: 'Tạo người dùng mới' })
   @ApiResponse({ status: 201, description: 'Tạo thành công' })
   @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        fullName: { type: 'string' },
+        phone: { type: 'string' },
+        email: { type: 'string' },
+        password: { type: 'string' },
+        role: { type: 'string' },
+        isDelete: { type: 'string' },
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @Description('Tạo một user mới', [
     { status: 200, description: 'create successfully' },
   ])
-  async createUser(@Body() createUserDto: CreateUserDto) {
-    return this.userService.createUser(createUserDto);
+  async createUser(
+    @Body() createUserDto: CreateUserDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const user = await this.userService.createUser(createUserDto);
+    
+    // Nếu có file ảnh, upload và cập nhật user
+    if (file) {
+      return this.userService.updateUserImage(user._id, file);
+    }
+    
+    return user;
   }
 
   @Roles(Role.ADMIN)
@@ -87,6 +123,7 @@ export class UsersController {
 
   @Public()
   @Get('getUserByPhone')
+  @Roles(Role.USER)
   @ApiOperation({ summary: 'Lấy thông tin người dùng theo số điện thoại' })
   @ApiResponse({ status: 200, description: 'Lấy thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy người dùng' })
@@ -99,6 +136,7 @@ export class UsersController {
 
   @Public()
   @Get(':id')
+  @Roles(Role.USER)
   @ApiOperation({ summary: 'Lấy thông tin người dùng theo ID' })
   @ApiParam({ name: 'id', description: 'ID của người dùng' })
   @ApiResponse({ status: 200, description: 'Lấy thành công' })
@@ -111,13 +149,32 @@ export class UsersController {
     return this.userService.findById(id);
   }
 
-  @Roles(Role.USER, Role.ADMIN)
   @Put(':id')
+  @Roles(Role.USER)
   @ApiOperation({ summary: 'Cập nhật thông tin người dùng' })
   @ApiParam({ name: 'id', description: 'ID của người dùng' })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy người dùng' })
   @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        fullName: { type: 'string' },
+        phone: { type: 'string' },
+        email: { type: 'string' },
+        password: { type: 'string' },
+        role: { type: 'string' },
+        isDelete: { type: 'string' },
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @Description('Cập nhật thông tin user', [
     { status: 200, description: 'update successfully' },
     { status: 404, description: 'user not found' },
@@ -125,9 +182,17 @@ export class UsersController {
   async updateUser(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    console.log(updateUserDto);
-    return this.userService.updateUser(id, updateUserDto);
+    // Cập nhật thông tin cơ bản của user
+    const updatedUser = await this.userService.updateUser(id, updateUserDto);
+    
+    // Nếu có file ảnh, upload và cập nhật user
+    if (file) {
+      return this.userService.updateUserImage(id, file);
+    }
+    
+    return updatedUser;
   }
 
   @Roles(Role.USER)
@@ -157,5 +222,28 @@ export class UsersController {
   ])
   async deleteUser(@Param('id') id: string) {
     return this.userService.deleteUser(id);
+  }
+
+  @Post('upload-image/:userId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadImage(
+    @Param('userId') userId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return await this.userService.updateUserImage(userId, file);
   }
 }

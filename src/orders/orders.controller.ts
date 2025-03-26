@@ -7,6 +7,8 @@ import { User } from '../common/meta/user.meta';
 import { Roles } from '../common/meta/role.meta';
 import { Role } from '../users/enum/role.enum';
 import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Control } from '../common/meta/control.meta';
+import { Description } from '../common/meta/description.meta';
 
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -137,6 +139,7 @@ const UPDATE_ORDER_SCHEMA = {
 @ApiBearerAuth('access-token')
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
+@Control('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
@@ -206,7 +209,9 @@ export class OrdersController {
     return this.ordersService.findAll();
   }
 
+
   @Get('my-orders')
+  @Roles(Role.USER)
   @ApiOperation({ summary: 'Lấy danh sách đơn hàng của người dùng' })
   @ApiResponse({
     status: 200,
@@ -217,9 +222,17 @@ export class OrdersController {
     status: 401,
     description: 'Không có quyền truy cập'
   })
-  findMyOrders(@User('_id') userId: string) {
-    console.log('findMyOrders', userId);
-    return this.ordersService.findByUser(userId);
+  findMyOrders(@User('_id') userId: any) {
+    console.log('findMyOrders', userId.toString());
+    return this.ordersService.findByUser(userId.toString());
+  }
+
+  @Get('success-orders')
+  @Roles(Role.USER)
+  @ApiOperation({ summary: 'Lấy danh sách đơn hàng thành công của người dùng' })
+  findSuccessOrders(@User('_id') userId: any) {
+    console.log('findSuccessOrders', userId.toString());
+    return this.ordersService.findSuccessOrders(userId.toString());
   }
 
   @Get(':id')
@@ -247,6 +260,7 @@ export class OrdersController {
   }
 
   @Patch(':id')
+  @Roles(Role.USER)
   @ApiOperation({ summary: 'Cập nhật trạng thái đơn hàng' })
   @ApiParam({
     name: 'id',
@@ -267,8 +281,9 @@ export class OrdersController {
     status: 404,
     description: 'Không tìm thấy đơn hàng'
   })
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(id, updateOrderDto);
+  update(@Param('id') id: string, @User('sub') userId: any, @Body() updateOrderDto: UpdateOrderDto) {
+    console.log('update', id, updateOrderDto);
+    return this.ordersService.updateStatus(id, updateOrderDto?.status);
   }
 
   @Delete(':id')
@@ -379,5 +394,27 @@ export class OrdersController {
       }
       throw new InternalServerErrorException('Không thể lấy danh sách đơn hàng');
     }
+  }
+
+  @Patch(':id/status')
+  @Roles(Role.ADMIN)
+  @Description('Cập nhật trạng thái đơn hàng', [
+    { status: 200, description: 'Cập nhật thành công' },
+    { status: 404, description: 'Không tìm thấy đơn hàng' }
+  ])
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          description: 'Trạng thái mới của đơn hàng',
+          example: 'completed'
+        }
+      }
+    }
+  })
+  updateStatus(@Param('id') id: string, @Body('status') status: string) {
+    return this.ordersService.updateStatus(id, status);
   }
 } 

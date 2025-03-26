@@ -8,16 +8,53 @@ import { UserModel } from './model/user.model';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { ChangePasswordDto } from './dto/changePassword.dto';
 import { UserStatus } from './enum/status.enum';
+import { CloudinaryService } from '../upload/cloudinary.service';
 
 @Injectable()
 export class UsersService {
-    async deleteUser(userId: string) {
-      const user = await this._usersRepo.findById(userId);
-      if (!user) {
-        throw MessengeCode.USER.NOT_FOUND;
-      }
-      return await this._usersRepo.updateUser(userId, { isDelete: UserStatus.INACTIVE });
+    private readonly _usersRepo: UsersRepo;
+    constructor(
+        usersRepo: UsersRepo,
+        private readonly cloudinaryService: CloudinaryService
+    ) {
+        this._usersRepo = usersRepo;
     }
+
+    async updateUserImage(userId: string, file: Express.Multer.File): Promise<UserModel> {
+        const user = await this._usersRepo.findById(userId);
+        if (!user) {
+            throw MessengeCode.USER.NOT_FOUND;
+        }
+
+        // Delete old image if exists
+        if (user.image) {
+            const publicId = this.cloudinaryService.getPublicIdFromUrl(user.image);
+            await this.cloudinaryService.deleteImage(publicId);
+        }
+
+        // Upload new image
+        const imageUrl = await this.cloudinaryService.uploadImage(file, 'users');
+
+        // Update user with new image URL
+        const updatedUser = await this._usersRepo.updateUser(userId, { image: imageUrl });
+        return new UserModel(updatedUser);
+    }
+
+    async deleteUser(userId: string) {
+        const user = await this._usersRepo.findById(userId);
+        if (!user) {
+            throw MessengeCode.USER.NOT_FOUND;
+        }
+
+        // Delete user's image from Cloudinary if exists
+        if (user.image) {
+            const publicId = this.cloudinaryService.getPublicIdFromUrl(user.image);
+            await this.cloudinaryService.deleteImage(publicId);
+        }
+
+        return await this._usersRepo.updateUser(userId, { isDelete: UserStatus.INACTIVE });
+    }
+
     async changePassword(changePasswordDto: ChangePasswordDto, userId: string) {
         const user = await this._usersRepo.findById(userId);
         if (!user) {
@@ -35,11 +72,6 @@ export class UsersService {
         });
         
         return new UserModel(updatedUser);
-    }
-
-    private readonly _usersRepo: UsersRepo;
-    constructor(usersRepo: UsersRepo) {
-        this._usersRepo = usersRepo;
     }
 
     async findOne(identifier: string) {
@@ -67,7 +99,8 @@ export class UsersService {
             role: createUserDto.role,
             isDelete: createUserDto.isDelete
         }
-        return await this._usersRepo.createUser(data);
+        const createdUser = await this._usersRepo.createUser(data);
+        return new UserModel(createdUser);
     }
 
     async findAll(): Promise<UserModel[]> {
@@ -110,7 +143,6 @@ export class UsersService {
         const data = await this._usersRepo.findByEmail(email);
         return new UserModel(data);
     }
-
 
     async addJWTUser(identifier: string, jwt: string){
         return await this._usersRepo.addJWTUser(identifier, jwt);

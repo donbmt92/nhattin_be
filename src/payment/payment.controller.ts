@@ -2,22 +2,24 @@ import { Get, Post, Body, Put, Param, Delete, UseGuards } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import { RolesGuard } from '../auth/guard/role.guard';
+// import { RolesGuard } from '../auth/guard/role.guard';
 import { Control } from '../common/meta/control.meta';
 import { Description } from '../common/meta/description.meta';
 import { Roles } from '../common/meta/role.meta';
 import { Role } from '../users/enum/role.enum';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Control('payments')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(Role.USER)
   @Description('Tạo mới thanh toán', [
     { status: 201, description: 'Tạo thành công' },
-    { status: 404, description: 'Không tìm thấy đơn hàng' }
+    { status: 404, description: 'Không tìm thấy đơn hàng' },
+    { status: 400, description: 'Đơn hàng đã thanh toán' }
   ])
   create(@Body() createPaymentDto: CreatePaymentDto) {
     return this.paymentService.create(createPaymentDto);

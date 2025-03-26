@@ -32,6 +32,9 @@ export class User {
 
   @Prop({ required: false, type: String, default: UserStatus.ACTIVE })
   isDelete: string;
+
+  @Prop({ required: false, type: String })
+  image: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
