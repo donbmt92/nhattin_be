@@ -20,6 +20,9 @@ export class Post {
   @Prop()
   slug?: string;
 
+  @Prop({ default: 0 })
+  views?: number;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'PostCategory', required: true })
   category: MongooseSchema.Types.ObjectId;
 

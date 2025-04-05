@@ -1,73 +1,171 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# NhatTin Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This repository contains the backend API for the NhatTin e-commerce platform built with NestJS. The system provides a comprehensive set of APIs for user management, product management, inventory tracking, orders, payments, and more.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Architecture Diagram
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Installation
-
-```bash
-$ npm install
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                  Client                                      │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                               API Gateway                                    │
+│                        (NestJS Application - main.ts)                        │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │
+         ┌───────────────────────────────────────────────────┐
+         │                                                   │
+         ▼                                                   ▼
+┌────────────────────┐                            ┌────────────────────────────┐
+│  Global Middleware │                            │     Global Exception       │
+│ ┌────────────────┐ │                            │         Filter            │
+│ │    Validation  │ │                            │  ┌─────────────────────┐  │
+│ │      Pipe      │ │                            │  │  HttpExceptionFilter│  │
+│ └────────────────┘ │                            │  └─────────────────────┘  │
+│ ┌────────────────┐ │                            │  ┌─────────────────────┐  │
+│ │  JWT Auth Guard│ │                            │  │    ApiException     │  │
+│ └────────────────┘ │                            │  └─────────────────────┘  │
+└──────────┬─────────┘                            └────────────────┬───────────┘
+           │                                                       │
+           └──────────────────────┬────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Application Modules                               │
+│                                                                             │
+│  ┌─────────────┐   ┌──────────┐   ┌─────────┐   ┌───────────┐   ┌────────┐  │
+│  │    Auth     │   │  Users   │   │Products │   │  Orders   │   │ Carts  │  │
+│  └─────────────┘   └──────────┘   └─────────┘   └───────────┘   └────────┘  │
+│                                                                             │
+│  ┌─────────────┐   ┌──────────┐   ┌─────────┐   ┌───────────┐   ┌────────┐  │
+│  │  Payment    │   │ Discount │   │ Image   │   │ Inventory │   │Category │  │
+│  └─────────────┘   └──────────┘   └─────────┘   └───────────┘   └────────┘  │
+│                                                                             │
+│  ┌─────────────┐   ┌──────────┐   ┌──────────────┐   ┌────────────────────┐ │
+│  │ Warehouses  │   │   Posts  │   │Subscriptions │   │Post-Categories etc. │ │
+│  └─────────────┘   └──────────┘   └──────────────┘   └────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             MongoDB Database                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Running the app
+## System Overview
+
+The NhatTin API is a modular NestJS application structured around domain-specific modules that each encapsulate a piece of functionality within the system. The application follows a layered architecture pattern with controllers, services, repositories, and schemas.
+
+### Core Components
+
+1. **API Gateway**: The entry point for all client requests, configured in main.ts
+   - Global validation
+   - Cross-origin resource sharing (CORS)
+   - Swagger documentation
+
+2. **Global Exception Handling**:
+   - Custom HttpExceptionFilter for consistent error responses
+   - ApiException for application-specific error types
+   - Centralized MessengeCode for error message management
+
+3. **Authentication & Authorization**:
+   - JWT-based authentication 
+   - Role-based access control (Admin/User roles)
+   - Public endpoints marked with @Public() decorator
+
+4. **Domain Modules**:
+   - Each module follows a similar structure with controllers, services, DTOs, and schemas
+   - Clear separation of concerns through repository pattern
+
+## Module Structure
+
+Each feature module typically contains:
+
+- **Controller** (`*.controller.ts`): Handles HTTP requests and returns responses
+- **Service** (`*.service.ts`): Contains business logic
+- **Repository** (`*.repo.ts`): Handles database operations
+- **Schema** (`*.schema.ts`): Defines the MongoDB document structure
+- **DTOs** (`dto/*.dto.ts`): Data Transfer Objects for validation
+- **Enums** (`enum/*.enum.ts`): Type definitions for fixed values
+- **Models** (`model/*.model.ts`): Response models for data mapping
+
+### Key Modules
+
+- **Auth**: Handles authentication, login, token management
+- **Users**: User management, profiles, and roles
+- **Products**: Product catalog management
+- **Carts**: Shopping cart functionality
+- **Orders**: Order processing and management
+- **Payment**: Payment processing
+- **Inventory**: Stock management
+- **Warehouses**: Warehouse management
+- **Categories**: Product categorization
+- **Posts/Post Categories**: CMS functionality
+
+## Common Utilities
+
+The `common` directory contains shared utilities used across modules:
+
+- **Meta**: Decorators and metadata helpers
+- **Exception**: Error handling utilities
+- **Utils**: General utilities (string manipulation, etc.)
+- **Pipes**: Custom validation pipes
+- **Interceptors**: Request/response transformation
+- **Models**: Base models for inheritance
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- MongoDB
+- npm or yarn
+
+### Installation
 
 ```bash
-# development
-$ npm run start
+# Install dependencies
+npm install
 
-# watch mode
-$ npm run start:dev
+# Configure environment
+cp .env.example .env
+# Edit .env with your MongoDB connection details
 
-# production mode
-$ npm run start:prod
+# Start the application
+npm run start:dev
 ```
 
-## Test
+### API Documentation
 
-```bash
-# unit tests
-$ npm run test
+Once the application is running, you can access the Swagger API documentation at:
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```
+http://localhost:3080/docs
 ```
 
-## Support
+## Authentication
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Most endpoints require authentication. To authenticate:
 
-## Stay in touch
+1. Create a user with the `/users/createUser` endpoint
+2. Login with the `/auth/login` endpoint to get a JWT token
+3. Use the token in the Authorization header: `Bearer {token}`
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Error Handling
 
-## License
+The application uses custom exception handling to provide consistent error responses:
 
-Nest is [MIT licensed](LICENSE).
+```json
+{
+  "statusCode": 400,
+  "message": "Số điện thoại đã được sử dụng",
+  "code": "PHONE_IS_EXIST"
+}
+```
+
+## File Upload
+
+The application supports file uploads (primarily images) using multipart/form-data.
+Uploaded files are served from the `/uploads` directory.

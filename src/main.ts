@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { HttpExceptionFilter } from './common/exception/http-exception.filter';
 // import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 async function bootstrap() {
@@ -16,6 +17,9 @@ async function bootstrap() {
     whitelist: true,
     forbidNonWhitelisted: true,
   }));
+
+  // Global exception filter
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // Remove global JWT guard if it exists
   // app.useGlobalGuards(new JwtAuthGuard());
@@ -45,7 +49,9 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(3080);
-  console.log('Application is running on: http://localhost:3080');
+  // Use PORT environment variable provided by Render, or default to 3080
+  const port = process.env.PORT || 3080;
+  await app.listen(port);
+  console.log(`Application is running on: http://localhost:${port}`);
 }
 bootstrap();

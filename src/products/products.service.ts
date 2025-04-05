@@ -16,7 +16,6 @@ import { SubscriptionTypesService } from '../subscription-types/subscription-typ
 import { SubscriptionDurationsService } from '../subscription-durations/subscription-durations.service';
 import { MongooseUtils } from '../common/utils/mongoose.utils';
 import { CloudinaryService } from '../upload/cloudinary.service';
-import { Category, CategoryDocument } from '../category/schemas/category.schema';
 
 @Injectable()
 export class ProductsService {
@@ -344,18 +343,19 @@ export class ProductsService {
     try {
       console.log(categoryName);
       // Tìm category theo tên
-      const category = await this.categoryService.findByName(categoryName);
+      const category: any = await this.categoryService.findByName(categoryName);
       if (!category) {
         throw new NotFoundException(`Không tìm thấy danh mục với tên: ${categoryName}`);
       }
 
       // Tìm tất cả sản phẩm thuộc category này
-      const products = await this.productModel.find({ id_category: (category as CategoryDocument)._id })
+      const products = await this.productModel.find({ id_category: category._id })
         .populate('id_category')
         .populate('id_discount')
         .populate('id_inventory')
         .exec();
-
+      console.log(products);
+      
       return products.map(product => {
         const productData = {
           ...product.toObject(),
@@ -372,6 +372,141 @@ export class ProductsService {
 
       throw new BadRequestException(
         `Không thể tìm sản phẩm theo danh mục: ${error.message}`
+      );
+    }
+  }
+
+  async findByName(query: string): Promise<ProductModel[]> {
+    try {
+      // Tìm sản phẩm theo tên, sử dụng regex để tìm kiếm gần đúng
+      const products = await this.productModel.find({
+        name: { $regex: query, $options: 'i' }
+      })
+        .populate('id_category')
+        .populate('id_discount')
+        .populate('id_inventory')
+        .exec();
+
+      return products.map(product => {
+        const productData = {
+          ...product.toObject(),
+          price: product.base_price,
+          desc: product.description
+        };
+        return ProductModel.fromEntity(productData);
+      });
+    } catch (error) {
+      throw new BadRequestException(
+        `Không thể tìm sản phẩm theo tên: ${error.message}`
+      );
+    }
+  }
+
+  async findByBrand(brandName: string): Promise<ProductModel[]> {
+    try {
+      // Lưu ý: Giả định rằng thương hiệu được lưu trong trường name của Category
+      // Tìm danh mục tương ứng với thương hiệu
+      const category: any = await this.categoryService.findByName(brandName);
+      
+      if (!category) {
+        return []; // Trả về mảng rỗng nếu không tìm thấy thương hiệu
+      }
+      
+      // Tìm sản phẩm theo ID của danh mục (thương hiệu)
+      // Category document has _id field from MongoDB
+      return this.findByCategory(category._id.toString());
+    } catch (error) {
+      // Xử lý trường hợp không tìm thấy danh mục (MessengeCode.CATEGORY.NOT_FOUND)
+      if (error.code === 'CATEGORY_NOT_FOUND') {
+        return [];
+      }
+      throw new BadRequestException(
+        `Không thể tìm sản phẩm theo thương hiệu: ${error.message}`
+      );
+    }
+  }
+
+  async findWithFilters(filters: {
+    query?: string,
+    categoryName?: string,
+    brand?: string,
+    minPrice?: number,
+    maxPrice?: number,
+    sortBy?: string,
+    sortDir?: string
+  }): Promise<ProductModel[]> {
+    try {
+      // Xây dựng các điều kiện tìm kiếm
+      const query: any = {};
+      
+      // Điều kiện tên sản phẩm
+      if (filters.query) {
+        query.name = { $regex: filters.query, $options: 'i' };
+      }
+      
+      // Điều kiện danh mục
+      if (filters.categoryName) {
+        try {
+          const category: any = await this.categoryService.findByName(filters.categoryName);
+          // Category document has _id field from MongoDB
+          query.id_category = category._id;
+        } catch (error) {
+          // Bỏ qua lỗi nếu không tìm thấy danh mục
+          if (error.code !== 'CATEGORY_NOT_FOUND') throw error;
+        }
+      }
+      
+      // Điều kiện giá
+      if (filters.minPrice || filters.maxPrice) {
+        query.base_price = {};
+        if (filters.minPrice) query.base_price.$gte = filters.minPrice;
+        if (filters.maxPrice) query.base_price.$lte = filters.maxPrice;
+      }
+      
+      // Điều kiện thương hiệu (giả sử thương hiệu là một loại danh mục)
+      if (filters.brand) {
+        try {
+          const brand: any = await this.categoryService.findByName(filters.brand);
+          // Category document has _id field from MongoDB
+          query.id_category = brand._id;
+        } catch (error) {
+          // Bỏ qua lỗi nếu không tìm thấy thương hiệu
+          if (error.code !== 'CATEGORY_NOT_FOUND') throw error;
+        }
+      }
+      
+      // Xây dựng điều kiện sắp xếp
+      const sortOptions: any = {};
+      if (filters.sortBy) {
+        // Ánh xạ các trường sortBy từ giao diện người dùng sang trường trong DB
+        const sortField = filters.sortBy === 'price' ? 'base_price' : 
+                         (filters.sortBy === 'date' ? 'createdAt' : 
+                         (filters.sortBy === 'popularity' ? 'sold' : filters.sortBy));
+        
+        sortOptions[sortField] = filters.sortDir === 'desc' ? -1 : 1;
+      } else {
+        sortOptions.createdAt = -1; // Mặc định sắp xếp theo thời gian tạo mới nhất
+      }
+      
+      // Thực hiện truy vấn
+      const products = await this.productModel.find(query)
+        .sort(sortOptions)
+        .populate('id_category')
+        .populate('id_discount')
+        .populate('id_inventory')
+        .exec();
+      
+      return products.map(product => {
+        const productData = {
+          ...product.toObject(),
+          price: product.base_price,
+          desc: product.description
+        };
+        return ProductModel.fromEntity(productData);
+      });
+    } catch (error) {
+      throw new BadRequestException(
+        `Không thể tìm sản phẩm với bộ lọc: ${error.message}`
       );
     }
   }

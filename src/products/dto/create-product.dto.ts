@@ -8,6 +8,7 @@ export class CreateProductDto {
     type: String,
     example: '65abc123def456'
   })
+  @IsOptional()
   id_category: string;
 
   @ApiProperty({
@@ -34,12 +35,14 @@ export class CreateProductDto {
     minLength: 3,
     maxLength: 100
   })
+  @IsOptional()
   name: string;
 
   @ApiProperty({
     description: 'Mô tả sản phẩm',
     example: 'Tài khoản Netflix Premium chất lượng cao, xem phim không giới hạn'
   })
+  @IsOptional()
   description: string;
 
   @ApiProperty({

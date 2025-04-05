@@ -23,13 +23,50 @@ export class PostsService {
   async create(createPostDto: CreatePostDto) {
     const category = await this.postCategoriesService.findOne(createPostDto.categoryId);
     
+    // If no slug is provided, generate one from the title
+    if (!createPostDto.slug) {
+      createPostDto.slug = this.generateSlug(createPostDto.title);
+    }
+    
+    // Check if slug already exists and make it unique if needed
+    createPostDto.slug = await this.ensureUniqueSlug(createPostDto.slug);
+    
     const post = await this.postModel.create({
       ...createPostDto,
       category: category._id,
-      author: "678f537fe84a347682865f17"
+      author: "678f537fe84a347682865f17" // Consider making this dynamic based on logged-in user
     });
 
     return post;
+  }
+
+  // Generate a slug from title
+  private generateSlug(title: string): string {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with a single hyphen
+      .trim();
+  }
+
+  // Ensure slug is unique
+  private async ensureUniqueSlug(slug: string): Promise<string> {
+    const existingPost = await this.postModel.findOne({ slug });
+    if (!existingPost) {
+      return slug;
+    }
+
+    // If slug exists, append a number to make it unique
+    let count = 1;
+    let newSlug = `${slug}-${count}`;
+    
+    while (await this.postModel.findOne({ slug: newSlug })) {
+      count++;
+      newSlug = `${slug}-${count}`;
+    }
+
+    return newSlug;
   }
 
   async findAll() {
@@ -50,6 +87,26 @@ export class PostsService {
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
+
+    return post;
+  }
+
+  async findBySlug(slug: string) {
+    const post = await this.postModel
+      .findOne({ slug, isActive: true })
+      .populate('category')
+      .populate('author')
+      .exec();
+
+    if (!post) {
+      throw new NotFoundException(`Post with slug "${slug}" not found`);
+    }
+
+    // Update view count
+    await this.postModel.updateOne(
+      { _id: post._id },
+      { $inc: { views: 1 } }
+    );
 
     return post;
   }

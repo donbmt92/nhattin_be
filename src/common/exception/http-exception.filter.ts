@@ -5,68 +5,53 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
-import { NextFunction, Request, Response } from 'express';
+import { Response } from 'express';
 import { ApiException } from './ApiException';
 
-@Catch(Error)
+@Catch(Error, HttpException, ApiException)
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    if (
-      exception instanceof ApiException &&
-      exception.constructor.name === ApiException.name
-    ) {
-      response.status(exception.getStatus()).json({
+    
+    console.log('Exception caught by filter:', exception);
+    
+    if (exception instanceof ApiException) {
+      console.log('ApiException detected:', {
         status: exception.getStatus(),
         message: exception.getResponse(),
         code: exception.code,
       });
+      
+      response.status(exception.getStatus()).json({
+        statusCode: exception.getStatus(),
+        message: exception.getResponse(),
+        code: exception.code,
+      });
+    } else if (exception instanceof HttpException) {
+      const status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      
+      console.log('HttpException:', { status, response: exceptionResponse });
+      
+      response.status(status).json({
+        statusCode: status,
+        message: typeof exceptionResponse === 'string' 
+          ? exceptionResponse 
+          : exceptionResponse['message'] || 'Lỗi hệ thống',
+        error: typeof exceptionResponse === 'object' ? exceptionResponse['error'] : undefined,
+      });
     } else {
-      // this.logger.error(exception.message);
-      // response.status(500).json({
-      //     status: 500,
-      //     message: 'Server Lỗi Liên hệ 0986439611 để fix',
-      //     code: 'INTERNAL_SERVER_ERROR',
-      // });
-      let isServerError = false;
-      switch (exception.constructor.name) {
-        case Error.name:
-          isServerError = true;
-          break;
-        case EvalError.name:
-          isServerError = true;
-          break;
-        case RangeError.name:
-          isServerError = true;
-          break;
-        case ReferenceError.name:
-          isServerError = true;
-          break;
-        case SyntaxError.name:
-          isServerError = true;
-          break;
-        case TypeError.name:
-          isServerError = true;
-          break;
-        case URIError.name:
-          isServerError = true;
-          break;
-        default:
-          isServerError = false;
-      }
-      if (isServerError) {
-		console.log(exception);
-        this.logger.error(exception.message);
-        response.status(500).json({
-          status: 500,
-          message: exception.message,
-          code: 'INTERNAL_SERVER_ERROR',
-        });
-      } else {
-        response.status(400).json(exception);
-      }
+      // Handle generic errors
+      this.logger.error(exception.message);
+      console.log('Generic error:', exception);
+      
+      response.status(500).json({
+        statusCode: 500,
+        message: exception.message || 'Lỗi hệ thống không xác định',
+        error: 'Internal Server Error',
+      });
     }
   }
 }

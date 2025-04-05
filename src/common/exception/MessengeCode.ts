@@ -22,32 +22,32 @@ export const MessengeCode = {
     }),
     PHONE_IS_EXIST: new ApiException({
       code: 'PHONE_IS_EXIST',
-      messenge: 'Số điện thoại đã được sử dụng',
+      message: 'Số điện thoại đã được sử dụng',
       status: HttpStatus.BAD_REQUEST
     }),
     PASSWORD_WRONG: new ApiException({
       code: 'PASSWORD_WRONG',
-      messenge: 'Sai mật khẩu',
+      message: 'Sai mật khẩu',
       status: HttpStatus.BAD_REQUEST
     }),
     USERNAME_WRONG: new ApiException({
       code: 'USERNAME_WRONG',
-      messenge: 'Sai tên đăng nhập',
+      message: 'Sai tên đăng nhập',
       status: HttpStatus.BAD_REQUEST
     }),
     INVALID_STATUS: new ApiException({
       code: 'INVALID_STATUS',
-      messenge: 'Trạng thái không hợp lệ',
+      message: 'Trạng thái không hợp lệ',
       status: HttpStatus.BAD_REQUEST
     }),
     EMAIL_IS_EXIST: new ApiException({
       code: 'EMAIL_IS_EXIST',
-      messenge: 'Email đã được sử dụng',
+      message: 'Email đã được sử dụng',
       status: HttpStatus.BAD_REQUEST
     }),
     UNAUTHORIZED: new ApiException({
       code: 'UNAUTHORIZED',
-      messenge: 'Bạn không có quyền truy cập',
+      message: 'Bạn không có quyền truy cập',
       status: HttpStatus.UNAUTHORIZED
     })
   },

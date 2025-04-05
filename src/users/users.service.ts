@@ -99,6 +99,7 @@ export class UsersService {
             role: createUserDto.role,
             isDelete: createUserDto.isDelete
         }
+        console.log(data);
         const createdUser = await this._usersRepo.createUser(data);
         return new UserModel(createdUser);
     }

@@ -154,6 +154,77 @@ export class ProductsController {
     return products;
   }
 
+  @Get('search/by-name')
+  @ApiOperation({
+    summary: 'Tìm sản phẩm theo tên',
+    description: 'Tìm kiếm sản phẩm dựa trên tên sản phẩm'
+  })
+  @ApiQuery({
+    name: 'query',
+    required: true,
+    type: String,
+    description: 'Từ khóa tìm kiếm'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách sản phẩm theo tên'
+  })
+  findByName(@Query('query') query: string) {
+    return this.productsService.findByName(query);
+  }
+
+  @Get('search')
+  @ApiOperation({
+    summary: 'Tìm kiếm sản phẩm nâng cao',
+    description: 'Tìm kiếm sản phẩm với nhiều tiêu chí lọc'
+  })
+  @ApiQuery({ name: 'query', required: false, type: String })
+  @ApiQuery({ name: 'categoryName', required: false, type: String })
+  @ApiQuery({ name: 'brand', required: false, type: String })
+  @ApiQuery({ name: 'minPrice', required: false, type: Number })
+  @ApiQuery({ name: 'maxPrice', required: false, type: Number })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'sortDir', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Danh sách sản phẩm phù hợp' })
+  findWithFilters(
+    @Query('query') query?: string,
+    @Query('categoryName') categoryName?: string,
+    @Query('brand') brand?: string,
+    @Query('minPrice') minPrice?: number,
+    @Query('maxPrice') maxPrice?: number,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
+  ) {
+    return this.productsService.findWithFilters({
+      query,
+      categoryName,
+      brand,
+      minPrice,
+      maxPrice,
+      sortBy,
+      sortDir
+    });
+  }
+
+  @Get('search/by-brand')
+  @ApiOperation({
+    summary: 'Tìm sản phẩm theo thương hiệu',
+    description: 'Tìm kiếm sản phẩm dựa trên tên thương hiệu'
+  })
+  @ApiQuery({
+    name: 'brandName',
+    required: true,
+    type: String,
+    description: 'Tên thương hiệu'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách sản phẩm theo thương hiệu'
+  })
+  findByBrand(@Query('brandName') brandName: string) {
+    return this.productsService.findByBrand(brandName);
+  }
+
   @Get('search/by-category-name')
   @ApiOperation({
     summary: 'Tìm sản phẩm theo tên danh mục',
@@ -174,7 +245,17 @@ export class ProductsController {
     { status: 404, description: 'Không tìm thấy danh mục' }
   ])
   findByCategoryName(@Query('categoryName') categoryName: string) {
+    console.log("cate",categoryName);
+    
     return this.productsService.findByCategoryName(categoryName);
+  }
+
+  @Get(':id/details')
+  @ApiOperation({ summary: 'Lấy thông tin chi tiết sản phẩm bao gồm loại gói và thời hạn' })
+  @ApiResponse({ status: 200, description: 'Thông tin chi tiết sản phẩm' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
+  async getProductDetails(@Param('id') id: string) {
+    return this.productsService.getProductDetails(id);
   }
 
   @Get(':id')
@@ -269,13 +350,5 @@ export class ProductsController {
     console.log('delete', id);
     const result = this.productsService.remove(id);
     return result;
-  }
-
-  @Get(':id/details')
-  @ApiOperation({ summary: 'Lấy thông tin chi tiết sản phẩm bao gồm loại gói và thời hạn' })
-  @ApiResponse({ status: 200, description: 'Thông tin chi tiết sản phẩm' })
-  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
-  async getProductDetails(@Param('id') id: string) {
-    return this.productsService.getProductDetails(id);
   }
 }

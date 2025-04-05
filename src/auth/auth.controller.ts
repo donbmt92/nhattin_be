@@ -1,9 +1,10 @@
 /* eslint-disable prettier/prettier */
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Get, Query, Headers } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { SignInDto } from './dto/signin.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiHeader } from '@nestjs/swagger';
+import { MessengeCode } from 'src/common/exception/MessengeCode';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -48,5 +49,50 @@ export class AuthController {
   })
   async signIn(@Body() signInDto: SignInDto) {
     return await this.authService.signIn(signInDto.email, signInDto.password);
+  }
+
+  @Public()
+  @Get('verify-token')
+  @ApiOperation({ summary: 'Xác thực token và lấy thông tin người dùng' })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'JWT Bearer Token',
+    required: true,
+    schema: { type: 'string', example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' }
+  })
+  @ApiQuery({
+    name: 'token',
+    required: false,
+    description: 'JWT Token (nếu không có trong header)',
+    type: String
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Xác thực token thành công'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token không hợp lệ hoặc đã hết hạn'
+  })
+  async verifyToken(
+    @Headers('authorization') authHeader: string,
+    @Query('token') queryToken: string
+  ) {
+    let token = queryToken;
+    
+    // Extract token from Authorization header if present
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    
+    if (!token) {
+      throw MessengeCode.USER.UNAUTHORIZED;
+    }
+    
+    const user = await this.authService.getUserFromToken(token);
+    return {
+      message: 'Token hợp lệ',
+      user
+    };
   }
 }

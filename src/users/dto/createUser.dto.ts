@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length, IsEmail } from 'class-validator';
+import { IsString, Length, IsEmail, IsOptional } from 'class-validator';
 import { UserStatus } from '../enum/status.enum';
 import { Role } from '../enum/role.enum';
 
@@ -25,8 +25,9 @@ export class CreateUserDto {
     type: String,
     example: 'user@example.com'
   })
+  @IsOptional()
   @IsString()
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  // @IsEmail({}, { message: 'Email không hợp lệ' })
   email: string;
 
   @ApiProperty({

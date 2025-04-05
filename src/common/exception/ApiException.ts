@@ -4,7 +4,7 @@ export class ApiException extends HttpException {
     public code : string;
 
     constructor(err){
-        super(err.messenger, err.status);
+        super(err.message || err.messenge, err.status);
         this.code = err.code;
     }
 }
