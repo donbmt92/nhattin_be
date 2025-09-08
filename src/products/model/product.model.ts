@@ -8,6 +8,7 @@ export class ProductModel extends BaseModel {
   id_discount?: Types.ObjectId;
   id_inventory?: Types.ObjectId;
   name: string;
+  slug?: string;
   description: string;
   image: string;
   thumbnail?: string;
@@ -26,6 +27,7 @@ export class ProductModel extends BaseModel {
     this.id_discount = product.id_discount;
     this.id_inventory = product.id_inventory;
     this.name = product.name;
+    this.slug = product.slug;
     this.description = product.description;
     this.image = product.image;
     this.thumbnail = product.thumbnail;
@@ -46,6 +48,7 @@ export class ProductModel extends BaseModel {
       id_discount: entity.id_discount,
       id_inventory: entity.id_inventory,
       name: entity.name,
+      slug: entity.slug,
       description: entity.description,
       image: entity.image,
       thumbnail: entity.thumbnail,

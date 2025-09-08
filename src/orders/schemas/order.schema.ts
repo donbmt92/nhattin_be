@@ -51,6 +51,19 @@ export class Order implements IOrder {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'OrderItem' }], default: [] })
   items: Types.ObjectId[];
 
+  // 🔥 NEW: Affiliate fields
+  @Prop({ type: String, index: true })
+  affiliateCode?: string;
+  
+  @Prop({ type: Number, default: 0 })
+  commissionAmount?: number;
+  
+  @Prop({ type: String, enum: ['PENDING', 'PAID', 'CANCELLED'], default: 'PENDING' })
+  commissionStatus?: string;
+  
+  @Prop({ type: Date })
+  commissionPaidDate?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }

@@ -35,6 +35,19 @@ export class User {
 
   @Prop({ required: false, type: String })
   image: string;
+
+  // 🔥 NEW: Affiliate fields
+  @Prop({ type: String, unique: true, sparse: true, index: true })
+  affiliateCode?: string;
+  
+  @Prop({ type: Boolean, default: false, index: true })
+  isAffiliate?: boolean;
+  
+  @Prop({ type: String, index: true })
+  referredBy?: string;
+  
+  @Prop({ type: Date })
+  affiliateJoinDate?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

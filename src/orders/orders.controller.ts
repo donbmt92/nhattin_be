@@ -13,6 +13,7 @@ import { Description } from '../common/meta/description.meta';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { BuyNowDto } from './dto/buy-now.dto';
 import { Order } from './schemas/order.schema';
 import { OrderStatus } from './enum/order-status.enum';
 
@@ -123,6 +124,28 @@ const ORDER_EXAMPLES = {
   }
 };
 
+const BUY_NOW_EXAMPLES = {
+  basicBuyNow: {
+    value: {
+      id_product: "65f2e0a3a2e0c60c848d3e12",
+      quantity: 1,
+      note: "Mua ngay - giao hàng nhanh"
+    },
+    summary: "Mua ngay cơ bản"
+  },
+  buyNowWithPayment: {
+    value: {
+      id_product: "65f2e0a3a2e0c60c848d3e12",
+      quantity: 2,
+      id_payment: "65f2e0a3a2e0c60c848d3e14",
+      note: "Mua ngay với thanh toán",
+      voucher: "SUMMER2024",
+      affiliateCode: "AFFILIATE123"
+    },
+    summary: "Mua ngay với đầy đủ thông tin"
+  }
+};
+
 const UPDATE_ORDER_SCHEMA = {
   type: 'object',
   properties: {
@@ -190,6 +213,55 @@ export class OrdersController {
   create(@User('sub') userId: any, @Body() createOrderDto: CreateOrderDto) {
     console.log('create', userId, createOrderDto);
     return this.ordersService.createFromCart(userId, createOrderDto);
+  }
+
+  @Post('buy-now')
+  @Roles(Role.USER)
+  @ApiOperation({ 
+    summary: 'Mua ngay sản phẩm', 
+    description: 'Mua trực tiếp sản phẩm mà không cần thêm vào giỏ hàng. Quá trình này sẽ:\n' +
+      '1. Kiểm tra sản phẩm tồn tại\n' +
+      '2. Kiểm tra số lượng trong kho\n' +
+      '3. Tạo đơn hàng mới với sản phẩm được chọn\n' +
+      '4. Tính giá dựa trên giá sản phẩm và voucher (nếu có)\n' +
+      '5. Cập nhật tồn kho\n' +
+      '6. Tính hoa hồng affiliate (nếu có mã affiliate)\n' +
+      '7. Trả về thông tin đơn hàng đã tạo'
+  })
+  @ApiBody({ 
+    type: BuyNowDto,
+    description: 'Thông tin mua ngay sản phẩm',
+    examples: BUY_NOW_EXAMPLES
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Mua ngay thành công',
+    schema: CREATE_ORDER_RESPONSE
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Lỗi khi mua ngay:\n' +
+      '- Sản phẩm không tồn tại\n' +
+      '- Số lượng phải lớn hơn 0\n' +
+      '- Số lượng sản phẩm trong kho không đủ\n' +
+      '- Thông tin thanh toán không hợp lệ\n' +
+      '- Mã voucher không hợp lệ hoặc đã hết hạn\n' +
+      '- Mã affiliate không hợp lệ'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Không có quyền truy cập - Yêu cầu đăng nhập'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Không tìm thấy thông tin:\n' +
+      '- Sản phẩm không tồn tại\n' +
+      '- Phương thức thanh toán không tồn tại\n' +
+      '- Voucher không tồn tại'
+  })
+  buyNow(@User('sub') userId: any, @Body() buyNowDto: BuyNowDto) {
+    console.log('buyNow', userId, buyNowDto);
+    return this.ordersService.buyNow(userId, buyNowDto);
   }
 
   @Get()

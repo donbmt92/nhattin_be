@@ -5,9 +5,9 @@ import { OrdersController } from './orders.controller';
 import { Order, OrderSchema } from './schemas/order.schema';
 import { OrderItem, OrderItemSchema } from './schemas/order-item.schema';
 import { CartsModule } from '../carts/carts.module';
-import { InventoryModule } from '../inventory/inventory.module';
-import { Product, ProductSchema } from '../products/schemas/product.schema';
-import { Category, CategorySchema } from '../categories/schemas/category.schema';
+import { ProductSchema } from '../products/schemas/product.schema';
+import { CategorySchema } from '../categories/schemas/category.schema';
+import { AffiliateModule } from '../affiliate/affiliate.module';
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { Category, CategorySchema } from '../categories/schemas/category.schema'
       { name: 'Category', schema: CategorySchema }
     ]),
     CartsModule,
-    InventoryModule
+    AffiliateModule
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

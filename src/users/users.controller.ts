@@ -16,7 +16,7 @@ import {
 import { UsersService } from './users.service';
 import { Control } from 'src/common/meta/control.meta';
 import { CreateUserDto } from './dto/createUser.dto';
-import { Public } from 'src/common/meta/public.meta';
+import { Public } from 'src/auth/decorators/public.decorator';
 import { Description } from 'src/common/meta/description.meta';
 import { Roles } from 'src/common/meta/role.meta';
 import { Role } from './enum/role.enum';
@@ -38,7 +38,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @ApiTags('Users')
 @Control('users')
 @Controller()
-@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(
     @Inject(UsersService) private readonly userService: UsersService
@@ -82,6 +81,7 @@ export class UsersController {
     return user;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN)
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách tất cả người dùng' })
@@ -93,6 +93,7 @@ export class UsersController {
     return this.userService.findAll();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.USER)
   @Delete('lockUser')
   @ApiOperation({ summary: 'Khóa người dùng' })
@@ -131,7 +132,6 @@ export class UsersController {
 
   @Public()
   @Get('getUserByPhone')
-  @Roles(Role.USER)
   @ApiOperation({ summary: 'Lấy thông tin người dùng theo số điện thoại' })
   @ApiResponse({ status: 200, description: 'Lấy thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy người dùng' })
@@ -144,7 +144,6 @@ export class UsersController {
 
   @Public()
   @Get(':id')
-  @Roles(Role.USER)
   @ApiOperation({ summary: 'Lấy thông tin người dùng theo ID' })
   @ApiParam({ name: 'id', description: 'ID của người dùng' })
   @ApiResponse({ status: 200, description: 'Lấy thành công' })
@@ -157,6 +156,7 @@ export class UsersController {
     return this.userService.findById(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   @Roles(Role.USER)
   @ApiOperation({ summary: 'Cập nhật thông tin người dùng' })
@@ -203,6 +203,7 @@ export class UsersController {
     return updatedUser;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.USER)
   @Put('changePassword')
   @ApiOperation({ summary: 'Đổi mật khẩu' })
@@ -221,6 +222,7 @@ export class UsersController {
   }
 
   //setIsDelete
+  @UseGuards(JwtAuthGuard)
   @Roles(Role.USER, Role.ADMIN)
   @Put('deleteUser/:id')
   @ApiOperation({ summary: 'Cập nhật trạng thái người dùng' })

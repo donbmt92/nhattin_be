@@ -126,7 +126,7 @@ export class ProductsController {
   @Get()
   @ApiOperation({
     summary: 'Lấy danh sách sản phẩm',
-    description: 'Lấy tất cả sản phẩm hoặc lọc theo danh mục'
+    description: 'Lấy tất cả sản phẩm hoặc lọc theo danh mục hoặc slug'
   })
   @ApiQuery({
     name: 'categoryId',
@@ -134,6 +134,13 @@ export class ProductsController {
     description: 'ID của danh mục cần lọc',
     type: 'string',
     example: '65abc123def456'
+  })
+  @ApiQuery({
+    name: 'slug',
+    required: false,
+    description: 'Slug của sản phẩm cần tìm',
+    type: 'string',
+    example: 'tai-khoan-netflix-premium'
   })
   @ApiResponse({
     status: 200,
@@ -143,7 +150,15 @@ export class ProductsController {
   @Description('Lấy danh sách sản phẩm', [
     { status: 200, description: 'Thành công' }
   ])
-  async findAll(@Query('categoryId') categoryId?: string) {
+  async findAll(
+    @Query('categoryId') categoryId?: string,
+    @Query('slug') slug?: string
+  ) {
+    if (slug) {
+      const product = await this.productsService.findBySlug(slug);
+      return [product]; // Trả về array để consistent với các endpoint khác
+    }
+    
     if (categoryId) {
       const products = await this.productsService.findByCategory(categoryId);
       console.log('Products by category:', JSON.stringify(products, null, 2));
@@ -179,6 +194,7 @@ export class ProductsController {
     description: 'Tìm kiếm sản phẩm với nhiều tiêu chí lọc'
   })
   @ApiQuery({ name: 'query', required: false, type: String })
+  @ApiQuery({ name: 'slug', required: false, type: String, description: 'Slug của sản phẩm' })
   @ApiQuery({ name: 'categoryName', required: false, type: String })
   @ApiQuery({ name: 'brand', required: false, type: String })
   @ApiQuery({ name: 'minPrice', required: false, type: Number })
@@ -188,6 +204,7 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Danh sách sản phẩm phù hợp' })
   findWithFilters(
     @Query('query') query?: string,
+    @Query('slug') slug?: string,
     @Query('categoryName') categoryName?: string,
     @Query('brand') brand?: string,
     @Query('minPrice') minPrice?: number,
@@ -197,6 +214,7 @@ export class ProductsController {
   ) {
     return this.productsService.findWithFilters({
       query,
+      slug,
       categoryName,
       brand,
       minPrice,
@@ -250,7 +268,126 @@ export class ProductsController {
     return this.productsService.findByCategoryName(categoryName);
   }
 
-  @Get(':id/details')
+  @Get('search/by-slug')
+  @ApiOperation({
+    summary: 'Tìm sản phẩm theo slug',
+    description: 'Tìm kiếm sản phẩm dựa trên slug (URL-friendly)'
+  })
+  @ApiQuery({
+    name: 'slug',
+    required: true,
+    type: String,
+    description: 'Slug của sản phẩm cần tìm',
+    example: 'tai-khoan-netflix-premium'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Thông tin chi tiết sản phẩm',
+    type: Product
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Không tìm thấy sản phẩm với slug này'
+  })
+  @Description('Tìm sản phẩm theo slug', [
+    { status: 200, description: 'Thông tin chi tiết sản phẩm' },
+    { status: 404, description: 'Không tìm thấy sản phẩm' }
+  ])
+  findBySlugQuery(@Query('slug') slug: string) {
+    return this.productsService.findBySlug(slug);
+  }
+
+  @Get('by-slug/:slug')
+  @ApiOperation({
+    summary: 'Lấy chi tiết sản phẩm theo slug',
+    description: 'Lấy thông tin chi tiết của sản phẩm dựa trên slug (URL-friendly)'
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'Slug của sản phẩm',
+    example: 'tai-khoan-netflix-premium',
+    type: 'string'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Thông tin chi tiết sản phẩm',
+    type: Product
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Không tìm thấy sản phẩm với slug này'
+  })
+  @Description('Lấy chi tiết sản phẩm theo slug', [
+    { status: 200, description: 'Thông tin chi tiết sản phẩm' },
+    { status: 404, description: 'Không tìm thấy sản phẩm' }
+  ])
+  findBySlug(@Param('slug') slug: string) {
+    return this.productsService.findBySlug(slug);
+  }
+
+  @Post('migrate-slugs')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Tạo slug cho sản phẩm cũ',
+    description: 'Tạo slug tự động cho tất cả sản phẩm chưa có slug. Chỉ dành cho admin.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Kết quả migration slug',
+    schema: {
+      type: 'object',
+      properties: {
+        updated: { type: 'number', description: 'Số sản phẩm đã cập nhật' },
+        errors: { type: 'array', items: { type: 'string' }, description: 'Danh sách lỗi' }
+      }
+    }
+  })
+  @Description('Tạo slug cho sản phẩm cũ', [
+    { status: 200, description: 'Migration hoàn thành' },
+    { status: 403, description: 'Không có quyền admin' }
+  ])
+  migrateSlugs() {
+    return this.productsService.generateSlugsForExistingProducts();
+  }
+
+  @Get('slug-status')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Kiểm tra trạng thái slug của sản phẩm',
+    description: 'Kiểm tra xem có bao nhiêu sản phẩm đã có slug và bao nhiêu chưa có. Chỉ dành cho admin.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Trạng thái slug của sản phẩm',
+    schema: {
+      type: 'object',
+      properties: {
+        total: { type: 'number', description: 'Tổng số sản phẩm' },
+        withSlug: { type: 'number', description: 'Số sản phẩm đã có slug' },
+        withoutSlug: { type: 'number', description: 'Số sản phẩm chưa có slug' },
+        productsWithoutSlug: { 
+          type: 'array', 
+          items: { 
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' }
+            }
+          },
+          description: 'Danh sách sản phẩm chưa có slug'
+        }
+      }
+    }
+  })
+  @Description('Kiểm tra trạng thái slug', [
+    { status: 200, description: 'Thông tin trạng thái slug' },
+    { status: 403, description: 'Không có quyền admin' }
+  ])
+  checkSlugStatus() {
+    return this.productsService.checkSlugStatus();
+  }
+
+  @Get(':id/details')   
   @ApiOperation({ summary: 'Lấy thông tin chi tiết sản phẩm bao gồm loại gói và thời hạn' })
   @ApiResponse({ status: 200, description: 'Thông tin chi tiết sản phẩm' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })

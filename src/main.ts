@@ -17,7 +17,7 @@ async function bootstrap() {
     whitelist: true,
     forbidNonWhitelisted: true,
   }));
-
+ 
   // Global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
 

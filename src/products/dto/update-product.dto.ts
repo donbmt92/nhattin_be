@@ -39,6 +39,14 @@ export class UpdateProductDto {
   name?: string;
 
   @ApiProperty({ 
+    description: 'Slug của sản phẩm (URL-friendly)',
+    example: 'tai-khoan-netflix-premium',
+    required: false
+  })
+  @IsOptional()
+  slug?: string;
+
+  @ApiProperty({ 
     type: 'string',
     format: 'binary',
     description: 'File ảnh sản phẩm mới (jpg, png, jpeg)',

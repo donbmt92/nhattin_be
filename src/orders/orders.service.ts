@@ -5,15 +5,17 @@ import { Model, Types } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { BuyNowDto } from './dto/buy-now.dto';
 import { OrderModel } from './model/order.model';
 import { MessengeCode } from '../common/exception/MessengeCode';
 import { CartsService } from '../carts/carts.service';
-import { InventoryService } from '../inventory/inventory.service';
 import { OrderItem, OrderItemDocument } from './schemas/order-item.schema';
 import { InjectConnection } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import { IProduct, ICategory } from './interfaces/product.interface';
 import { OrderStatus } from './enum/order-status.enum';
+import { AffiliateService } from '../affiliate/affiliate.service';
+import { AffiliateLinkService } from '../affiliate/affiliate-link.service';
 
 @Injectable()
 export class OrdersService {
@@ -23,8 +25,9 @@ export class OrdersService {
     @InjectModel('Product') private productModel: Model<IProduct>,
     @InjectModel('Category') private categoryModel: Model<ICategory>,
     private readonly cartsService: CartsService,
-    private readonly inventoryService: InventoryService,
     @InjectConnection() private readonly connection: mongoose.Connection,
+    private readonly affiliateService: AffiliateService,
+    private readonly affiliateLinkService: AffiliateLinkService,
   ) {}
 
   async createFromCart(userId: string, createOrderDto: CreateOrderDto): Promise<any> {
@@ -376,6 +379,119 @@ export class OrdersService {
     } catch (error) {
       console.error('Error fetching order items:', error);
       throw new Error('Không thể lấy danh sách sản phẩm trong đơn hàng');
+    }
+  }
+
+  async buyNow(userId: string, buyNowDto: BuyNowDto): Promise<any> {
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      // 1. Validate product exists
+      const product = await this.productModel.findById(buyNowDto.id_product).lean() as IProduct;
+      if (!product) {
+        throw new BadRequestException(`Sản phẩm không tồn tại: ${buyNowDto.id_product}`);
+      }
+
+      // 2. Validate quantity
+      if (buyNowDto.quantity <= 0) {
+        throw new BadRequestException('Số lượng phải lớn hơn 0');
+      }
+
+      // 3. Skip inventory check - allow purchase without warehouse validation
+
+      // 4. Get category info
+      const category = await this.categoryModel.findById(product.id_category).lean() as ICategory;
+
+      // 5. Create new order
+      const order = new this.orderModel({
+        uid: userId,
+        id_payment: buyNowDto.id_payment,
+        voucher: buyNowDto.voucher,
+        status: buyNowDto.status || 'pending',
+        note: buyNowDto.note || 'Mua ngay',
+        total_items: buyNowDto.quantity,
+        items: [],
+        affiliateCode: buyNowDto.affiliateCode
+      });
+
+      const savedOrder = await order.save({ session });
+
+      // 6. Create order item
+      const orderItem = new this.orderItemModel({
+        id_order: savedOrder._id,
+        id_product: product._id,
+        quantity: buyNowDto.quantity,
+        old_price: product.base_price,
+        discount_precent: product.discount?.discount_precent || 0,
+        final_price: product.base_price * (1 - (product.discount?.discount_precent || 0) / 100),
+        product_snapshot: {
+          name: product.name,
+          image: product.image,
+          description: product.description,
+          base_price: product.base_price,
+          category_id: product.id_category,
+          category_name: category?.name || 'Unknown'
+        }
+      });
+
+      const savedItem = await orderItem.save({ session });
+
+      // 7. Update order with item ID
+      savedOrder.items = [savedItem._id] as any;
+      await savedOrder.save({ session });
+
+      // 8. Skip inventory reduction - no warehouse management
+
+      // 9. Handle affiliate commission if affiliate code provided
+      if (buyNowDto.affiliateCode) {
+        try {
+          // Check if it's an affiliate link code
+          try {
+            await this.affiliateLinkService.trackConversion(
+              buyNowDto.affiliateCode, 
+              userId, 
+              savedItem.final_price * buyNowDto.quantity
+            );
+          } catch (linkError) {
+            // If not a link code, try as regular affiliate code
+            await this.affiliateService.processCommissionAfterPayment({
+              affiliateCode: buyNowDto.affiliateCode,
+              totalAmount: savedItem.final_price * buyNowDto.quantity
+            });
+          }
+        } catch (affiliateError) {
+          console.warn('Affiliate commission calculation failed:', affiliateError.message);
+          // Don't fail the order if affiliate calculation fails
+        }
+      }
+
+      // 10. Commit transaction
+      await session.commitTransaction();
+
+      // 11. Return order with item details
+      const orderModel = OrderModel.fromEntity(savedOrder);
+      return {
+        ...orderModel,
+        items: [{
+          id: savedItem._id,
+          quantity: savedItem.quantity,
+          old_price: savedItem.old_price,
+          discount_precent: savedItem.discount_precent,
+          final_price: savedItem.final_price,
+          product_snapshot: savedItem.product_snapshot
+        }]
+      };
+
+    } catch (error) {
+      await session.abortTransaction();
+      console.error('Error in buy now:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error('Không thể thực hiện mua ngay: ' + error.message);
+    } finally {
+      session.endSession();
     }
   }
 } 

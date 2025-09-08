@@ -6,6 +6,7 @@ import { Request } from 'express';
 import { UsersService } from "src/users/users.service";
 import { JwtService } from "@nestjs/jwt";
 import { jwtConstants } from "../constants";
+import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -18,7 +19,7 @@ export class RolesGuard implements CanActivate {
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);

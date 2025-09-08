@@ -104,38 +104,92 @@ export class InventoryService {
   }
 
   async checkStock(productId: string, quantity: number): Promise<boolean> {
+    console.log('productId', productId);
+    console.log('quantity', quantity);
+    
     const inventories = await this.inventoryModel
       .find({ id_product: new Types.ObjectId(productId) })
       .exec();
-
-    const totalStock = inventories.reduce((sum, inv) => sum + inv.quantity, 0);
+    console.log('inventories', inventories);
+    
+    if (!inventories || inventories.length === 0) {
+      console.log('No inventory found for product:', productId);
+      return false;
+    }
+    
+    const totalStock = inventories.reduce((sum, inv) => sum + inv.quantity, 0); 
+    console.log('totalStock:', totalStock, 'required:', quantity); 
     return totalStock >= quantity;
   }
 
   async checkAndReduceInventory(productId: Types.ObjectId, quantity: number): Promise<void> {
-    const inventory = await this.inventoryModel.findOne({ id_product: productId });
+    // Tìm tất cả inventory của sản phẩm
+    const inventories = await this.inventoryModel
+      .find({ id_product: productId })
+      .sort({ quantity: -1 }) // Sắp xếp theo số lượng giảm dần
+      .exec();
     
-    if (!inventory) {
+    if (!inventories || inventories.length === 0) {
       throw new BadRequestException('Không tìm thấy thông tin tồn kho của sản phẩm');
     }
 
-    if (inventory.quantity < quantity) {
-      throw new BadRequestException('Số lượng sản phẩm trong kho không đủ');
+    // Tính tổng tồn kho
+    const totalStock = inventories.reduce((sum, inv) => sum + inv.quantity, 0);
+    if (totalStock < quantity) {
+      throw new BadRequestException(`Số lượng sản phẩm trong kho không đủ. Có ${totalStock} sản phẩm, cần ${quantity}`);
     }
 
-    // Reduce inventory
-    inventory.quantity -= quantity;
-    await inventory.save();
+    // Giảm tồn kho từ các kho có số lượng nhiều nhất
+    let remainingQuantity = quantity;
+    
+    for (const inventory of inventories) {
+      if (remainingQuantity <= 0) break;
+      
+      const reduceAmount = Math.min(remainingQuantity, inventory.quantity);
+      
+      // Giảm tồn kho
+      inventory.quantity -= reduceAmount;
+      await inventory.save();
 
-    // Create inventory log
-    const log = new this.inventoryLogModel({
-      id_inventory: inventory._id,
-      quantity: -quantity,
-      transaction_type: 'order',
-      note: 'Giảm tồn kho do đặt hàng',
-      transaction_date: new Date()
-    });
+      // Tạo log
+      const log = new this.inventoryLogModel({
+        id_inventory: inventory._id,
+        quantity: -reduceAmount,
+        transaction_type: 'order',
+        note: `Giảm tồn kho do đặt hàng (${reduceAmount} sản phẩm)`,
+        transaction_date: new Date()
+      });
 
-    await log.save();
+      await log.save();
+      
+      remainingQuantity -= reduceAmount;
+    }
+  }
+
+  // Method để tạo inventory mặc định cho sản phẩm mới
+  async createDefaultInventory(productId: string, warehouseId: string, quantity: number = 100): Promise<InventoryModel> {
+    try {
+      // Kiểm tra xem đã có inventory chưa
+      const existingInventory = await this.inventoryModel.findOne({
+        id_product: new Types.ObjectId(productId),
+        id_warehouse: new Types.ObjectId(warehouseId)
+      });
+
+      if (existingInventory) {
+        return InventoryModel.fromEntity(existingInventory);
+      }
+
+      // Tạo inventory mới
+      const createInventoryDto = {
+        id_product: productId,
+        id_warehouse: warehouseId,
+        quantity: quantity
+      };
+
+      return await this.create(createInventoryDto);
+    } catch (error) {
+      console.error('Error creating default inventory:', error);
+      throw new BadRequestException('Không thể tạo tồn kho mặc định cho sản phẩm');
+    }
   }
 }

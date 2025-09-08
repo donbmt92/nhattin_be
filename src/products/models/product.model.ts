@@ -38,6 +38,13 @@ export class ProductModel {
   name: string;
 
   @ApiProperty({
+    description: 'Slug của sản phẩm (URL-friendly)',
+    example: 'tai-khoan-netflix-premium',
+    required: false
+  })
+  slug?: string;
+
+  @ApiProperty({
     description: 'Mô tả sản phẩm',
     example: 'Tài khoản Netflix Premium chất lượng cao, xem phim không giới hạn'
   })

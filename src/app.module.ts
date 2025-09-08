@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { DiscountModule } from './discount/discount.module';
@@ -25,6 +26,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PostsModule } from './posts/posts.module';
 import { PostCategoriesModule } from './post-categories/post-categories.module';
+import { AffiliateModule } from './affiliate/affiliate.module';
 
 const ENV = process.env.NODE_ENV;
 
@@ -38,6 +40,10 @@ const ENV = process.env.NODE_ENV;
       envFilePath: !ENV ? '.env' : `.env.${ENV}`,
       isGlobal: true 
     }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
     MongooseModule.forRoot(process.env.MONGODB_URI || process.env.MONGOURL, {
       dbName: process.env.DATABASE,
       connectionFactory: (connection) => {
@@ -64,7 +70,10 @@ const ENV = process.env.NODE_ENV;
     SubscriptionDurationsModule,
     SubscriptionsModule,
     PostsModule,
-    PostCategoriesModule
+    PostCategoriesModule,
+    
+    // 🔥 NEW: Affiliate Module
+    AffiliateModule
   ],
   controllers: [],
   providers: [

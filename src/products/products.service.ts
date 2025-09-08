@@ -28,6 +28,54 @@ export class ProductsService {
     private readonly cloudinaryService: CloudinaryService
   ) {}
 
+  /**
+   * Tạo slug từ tên sản phẩm
+   * @param name Tên sản phẩm
+   * @returns Slug URL-friendly
+   */
+  private generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g, 'a')
+      .replace(/[èéẹẻẽêềếệểễ]/g, 'e')
+      .replace(/[ìíịỉĩ]/g, 'i')
+      .replace(/[òóọỏõôồốộổỗơờớợởỡ]/g, 'o')
+      .replace(/[ùúụủũưừứựửữ]/g, 'u')
+      .replace(/[ỳýỵỷỹ]/g, 'y')
+      .replace(/đ/g, 'd')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  /**
+   * Tạo slug unique bằng cách thêm số nếu slug đã tồn tại
+   * @param baseSlug Slug gốc
+   * @param excludeId ID sản phẩm cần loại trừ (khi update)
+   * @returns Slug unique
+   */
+  private async generateUniqueSlug(baseSlug: string, excludeId?: string): Promise<string> {
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const query: any = { slug: slug };
+      if (excludeId) {
+        query._id = { $ne: new Types.ObjectId(excludeId) };
+      }
+
+      const existingProduct = await this.productModel.findOne(query);
+      if (!existingProduct) {
+        return slug;
+      }
+
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+  }
+
   async create(
     createProductDto: CreateProductDto,
     file?: Express.Multer.File
@@ -59,6 +107,15 @@ export class ProductsService {
       if (file) {
         const imageUrl = await this.cloudinaryService.uploadImage(file, 'products');
         data.image = imageUrl;
+      }
+
+      // Tạo slug tự động nếu không có slug được cung cấp
+      if (!data.slug && data.name) {
+        const baseSlug = this.generateSlug(data.name);
+        data.slug = await this.generateUniqueSlug(baseSlug);
+      } else if (data.slug) {
+        // Nếu có slug được cung cấp, đảm bảo nó unique
+        data.slug = await this.generateUniqueSlug(data.slug);
       }
 
       // Tạo sản phẩm mới
@@ -149,6 +206,38 @@ export class ProductsService {
     return ProductModel.fromEntity(productData);
   }
 
+  async findBySlug(slug: string): Promise<ProductModel> {
+    try {
+      if (!slug || slug.trim() === '') {
+        throw new BadRequestException('Slug không được để trống');
+      }
+
+      const product = await this.productModel.findOne({ slug: slug })
+        .populate('id_category')
+        .populate('id_discount')
+        .populate('id_inventory')
+        .exec();
+        
+      if (!product) {
+        throw new NotFoundException(`Không tìm thấy sản phẩm với slug: ${slug}`);
+      }
+      
+      // Ensure we have all necessary fields
+      const productData = {
+        ...product.toObject(),
+        price: product.base_price, // Map base_price to price
+        desc: product.description // Map description to desc
+      };
+      
+      return ProductModel.fromEntity(productData);
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể tìm sản phẩm theo slug: ' + error.message);
+    }
+  }
+
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
@@ -184,6 +273,16 @@ export class ProductsService {
         !isValidObjectId(updateData.id_inventory)
       ) {
         throw new BadRequestException('ID kho hàng không hợp lệ');
+      }
+
+      // Xử lý slug
+      if (updateData.name && !updateData.slug) {
+        // Nếu tên thay đổi nhưng không có slug mới, tạo slug từ tên mới
+        const baseSlug = this.generateSlug(updateData.name);
+        updateData.slug = await this.generateUniqueSlug(baseSlug, id);
+      } else if (updateData.slug) {
+        // Nếu có slug mới được cung cấp, đảm bảo nó unique
+        updateData.slug = await this.generateUniqueSlug(updateData.slug, id);
       }
 
       // Handle file update
@@ -428,6 +527,7 @@ export class ProductsService {
 
   async findWithFilters(filters: {
     query?: string,
+    slug?: string,
     categoryName?: string,
     brand?: string,
     minPrice?: number,
@@ -442,6 +542,11 @@ export class ProductsService {
       // Điều kiện tên sản phẩm
       if (filters.query) {
         query.name = { $regex: filters.query, $options: 'i' };
+      }
+      
+      // Điều kiện slug
+      if (filters.slug) {
+        query.slug = { $regex: filters.slug, $options: 'i' };
       }
       
       // Điều kiện danh mục
@@ -508,6 +613,88 @@ export class ProductsService {
       throw new BadRequestException(
         `Không thể tìm sản phẩm với bộ lọc: ${error.message}`
       );
+    }
+  }
+
+  /**
+   * Kiểm tra trạng thái slug của các sản phẩm hiện tại
+   */
+  async checkSlugStatus(): Promise<{
+    total: number;
+    withSlug: number;
+    withoutSlug: number;
+    productsWithoutSlug: Array<{ id: string; name: string }>;
+  }> {
+    try {
+      const totalProducts = await this.productModel.countDocuments();
+      const productsWithSlug = await this.productModel.countDocuments({
+        $and: [
+          { slug: { $exists: true } },
+          { slug: { $ne: null } },
+          { slug: { $ne: '' } }
+        ]
+      });
+      const productsWithoutSlug = await this.productModel.find({
+        $or: [
+          { slug: { $exists: false } },
+          { slug: null },
+          { slug: '' }
+        ]
+      }).select('_id name').lean();
+
+      return {
+        total: totalProducts,
+        withSlug: productsWithSlug,
+        withoutSlug: productsWithoutSlug.length,
+        productsWithoutSlug: productsWithoutSlug.map(p => ({
+          id: p._id.toString(),
+          name: p.name
+        }))
+      };
+    } catch (error) {
+      throw new BadRequestException('Không thể kiểm tra trạng thái slug: ' + error.message);
+    }
+  }
+
+  /**
+   * Tạo slug cho tất cả sản phẩm cũ chưa có slug
+   * Method này chỉ nên chạy một lần để migrate dữ liệu cũ
+   */
+  async generateSlugsForExistingProducts(): Promise<{ updated: number; errors: string[] }> {
+    try {
+      const products = await this.productModel.find({ 
+        $or: [
+          { slug: { $exists: false } },
+          { slug: null },
+          { slug: '' }
+        ]
+      });
+
+      let updated = 0;
+      const errors: string[] = [];
+
+      for (const product of products) {
+        try {
+          if (product.name) {
+            const baseSlug = this.generateSlug(product.name);
+            const uniqueSlug = await this.generateUniqueSlug(baseSlug);
+            
+            await this.productModel.findByIdAndUpdate(
+              product._id,
+              { slug: uniqueSlug }
+            );
+            
+            updated++;
+            console.log(`Updated product ${product._id}: ${product.name} -> ${uniqueSlug}`);
+          }
+        } catch (error) {
+          errors.push(`Product ${product._id}: ${error.message}`);
+        }
+      }
+
+      return { updated, errors };
+    } catch (error) {
+      throw new BadRequestException('Không thể tạo slug cho sản phẩm cũ: ' + error.message);
     }
   }
 }

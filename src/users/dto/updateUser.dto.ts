@@ -73,4 +73,39 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   image?: string;
+
+  // 🔥 NEW: Affiliate fields
+  @ApiProperty({
+    description: 'Mã affiliate',
+    type: String,
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  affiliateCode?: string;
+
+  @ApiProperty({
+    description: 'Có phải là affiliate không',
+    type: Boolean,
+    required: false
+  })
+  @IsOptional()
+  isAffiliate?: boolean;
+
+  @ApiProperty({
+    description: 'Được giới thiệu bởi affiliate code',
+    type: String,
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  referredBy?: string;
+
+  @ApiProperty({
+    description: 'Ngày tham gia affiliate',
+    type: Date,
+    required: false
+  })
+  @IsOptional()
+  affiliateJoinDate?: Date;
 } 
