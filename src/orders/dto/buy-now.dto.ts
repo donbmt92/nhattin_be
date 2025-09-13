@@ -63,4 +63,11 @@ export class BuyNowDto {
   @IsString()
   @IsOptional()
   affiliateCode?: string;
+
+  @ApiProperty({ 
+    description: 'Email của người dùng',
+    example: 'user@example.com'
+  })
+  @IsString()
+  userEmail: string;
 }

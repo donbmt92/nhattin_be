@@ -150,4 +150,95 @@ export class AffiliateController {
       data: dashboard
     };
   }
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy thống kê affiliate' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy thống kê affiliate thành công'
+  })
+  async getAffiliateStats(@User('_id') userId: string) {
+    const stats = await this.affiliateService.getAffiliateStats(userId);
+    
+    return {
+      success: true,
+      data: stats
+    };
+  }
+
+  @Get('transactions')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy lịch sử giao dịch affiliate' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy lịch sử giao dịch thành công'
+  })
+  async getTransactionHistory(@User('_id') userId: string) {
+    const affiliate = await this.affiliateService.getAffiliateByUserId(userId);
+    if (!affiliate) {
+      return {
+        success: false,
+        message: 'Không tìm thấy thông tin affiliate'
+      };
+    }
+
+    const transactions = await this.affiliateService.getTransactionHistory(affiliate._id.toString());
+    
+    return {
+      success: true,
+      data: transactions
+    };
+  }
+
+  @Get('referrals')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy danh sách referrals' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy danh sách referrals thành công'
+  })
+  async getReferrals(@User('_id') userId: string) {
+    const affiliate = await this.affiliateService.getAffiliateByUserId(userId);
+    if (!affiliate) {
+      return {
+        success: false,
+        message: 'Không tìm thấy thông tin affiliate'
+      };
+    }
+
+    const referrals = await this.affiliateService.getReferrals(affiliate._id.toString());
+    
+    return {
+      success: true,
+      data: referrals
+    };
+  }
+
+  @Post('payout')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.USER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Yêu cầu rút tiền' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Yêu cầu rút tiền thành công'
+  })
+  async requestPayout(
+    @Body() payoutDto: { amount: number },
+    @User('_id') userId: string
+  ) {
+    const result = await this.affiliateService.requestPayout(userId, payoutDto.amount);
+    
+    return {
+      success: true,
+      data: result
+    };
+  }
 }

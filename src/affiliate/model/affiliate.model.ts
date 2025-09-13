@@ -48,6 +48,7 @@ export interface ICreateAffiliateFromDto {
 
 export interface IUpdateAffiliate {
   commissionRate?: number;
+  totalEarnings?: number;
   paymentInfo?: {
     bankName: string;
     accountNumber: string;

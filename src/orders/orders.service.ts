@@ -387,23 +387,46 @@ export class OrdersService {
     session.startTransaction();
 
     try {
-      // 1. Validate product exists
+      // 1. Delete any existing pending orders for this user
+      const existingPendingOrders = await this.orderModel
+        .find({ 
+          uid: userId,
+          status: 'pending'
+        })
+        .session(session);
+
+      if (existingPendingOrders.length > 0) {
+        console.log(`🗑️ Xóa ${existingPendingOrders.length} đơn hàng cũ cho user ${userId}`);
+        
+        // Delete associated order items first
+        for (const order of existingPendingOrders) {
+          await this.orderItemModel.deleteMany({ id_order: order._id }).session(session);
+        }
+        
+        // Then delete the orders
+        await this.orderModel.deleteMany({ 
+          uid: userId,
+          status: 'pending'
+        }).session(session);
+      }
+
+      // 2. Validate product exists
       const product = await this.productModel.findById(buyNowDto.id_product).lean() as IProduct;
       if (!product) {
         throw new BadRequestException(`Sản phẩm không tồn tại: ${buyNowDto.id_product}`);
       }
 
-      // 2. Validate quantity
+      // 3. Validate quantity
       if (buyNowDto.quantity <= 0) {
         throw new BadRequestException('Số lượng phải lớn hơn 0');
       }
 
-      // 3. Skip inventory check - allow purchase without warehouse validation
+      // 4. Skip inventory check - allow purchase without warehouse validation
 
-      // 4. Get category info
+      // 5. Get category info
       const category = await this.categoryModel.findById(product.id_category).lean() as ICategory;
 
-      // 5. Create new order
+      // 6. Create new order
       const order = new this.orderModel({
         uid: userId,
         id_payment: buyNowDto.id_payment,
@@ -417,7 +440,7 @@ export class OrdersService {
 
       const savedOrder = await order.save({ session });
 
-      // 6. Create order item
+      // 7. Create order item
       const orderItem = new this.orderItemModel({
         id_order: savedOrder._id,
         id_product: product._id,
@@ -437,13 +460,13 @@ export class OrdersService {
 
       const savedItem = await orderItem.save({ session });
 
-      // 7. Update order with item ID
+      // 8. Update order with item ID
       savedOrder.items = [savedItem._id] as any;
       await savedOrder.save({ session });
 
-      // 8. Skip inventory reduction - no warehouse management
+      // 9. Skip inventory reduction - no warehouse management
 
-      // 9. Handle affiliate commission if affiliate code provided
+      // 10. Handle affiliate commission if affiliate code provided
       if (buyNowDto.affiliateCode) {
         try {
           // Check if it's an affiliate link code
@@ -453,12 +476,22 @@ export class OrdersService {
               userId, 
               savedItem.final_price * buyNowDto.quantity
             );
-          } catch (linkError) {
+          } catch {
             // If not a link code, try as regular affiliate code
-            await this.affiliateService.processCommissionAfterPayment({
+            const commissionResult = await this.affiliateService.processCommissionAfterPayment({
+              _id: savedOrder._id,
               affiliateCode: buyNowDto.affiliateCode,
-              totalAmount: savedItem.final_price * buyNowDto.quantity
+              totalAmount: savedItem.final_price * buyNowDto.quantity,
+              userId: userId,
+              userEmail: buyNowDto.userEmail
             });
+            
+            if (commissionResult) {
+              // Cập nhật order với commission info
+              savedOrder.commissionAmount = commissionResult.commission;
+              await savedOrder.save({ session });
+              console.log(`✅ Commission processed for order ${savedOrder._id}: ${commissionResult.commission} VND`);
+            }
           }
         } catch (affiliateError) {
           console.warn('Affiliate commission calculation failed:', affiliateError.message);
@@ -466,10 +499,10 @@ export class OrdersService {
         }
       }
 
-      // 10. Commit transaction
+      // 11. Commit transaction
       await session.commitTransaction();
 
-      // 11. Return order with item details
+      // 12. Return order with item details
       const orderModel = OrderModel.fromEntity(savedOrder);
       return {
         ...orderModel,

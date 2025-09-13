@@ -11,17 +11,18 @@ import {
   Req,
   Res
 } from '@nestjs/common';
+import * as mongoose from 'mongoose';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AffiliateLinkService } from './affiliate-link.service';
 import { CreateAffiliateLinkDto, AffiliateLinkResponseDto } from './dto/create-affiliate-link.dto';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '../common/meta/user.meta';
+import { AffiliateRepo } from './affiliate.repo';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../users/enum/role.enum';
 import { Request, Response } from 'express';
 import { CleanupExpiredLinksTask } from './tasks/cleanup-expired-links.task';
-import { AffiliateRepo } from './affiliate.repo';
 
 @ApiTags('Affiliate Links')
 @Controller('affiliate-links')
@@ -222,17 +223,81 @@ export class AffiliateRedirectController {
     @Res() res: Response
   ) {
     try {
+      console.log(`🔗 Redirecting affiliate link: ${linkCode}`);
+      
       // Lấy IP của user
       const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
       
       // Track click
       const link = await this.affiliateLinkService.trackClick(linkCode, userIP);
       
+      console.log(`✅ Link found, redirecting to: ${link.originalUrl}`);
+      
       // Redirect đến trang sản phẩm
       res.redirect(302, link.originalUrl);
     } catch (error) {
+      console.error(`❌ Affiliate redirect error for ${linkCode}:`, error.message);
+      
       // Nếu link không hợp lệ, redirect về trang chủ
       res.redirect(302, process.env.FRONTEND_URL || 'http://localhost:3001');
+    }
+  }
+
+  @Get('list-all')
+  @ApiOperation({ summary: 'Lấy danh sách tất cả affiliate links' })
+  async listAllLinks() {
+    try {
+      // Lấy tất cả affiliate links từ database
+      const links = await this.affiliateLinkService.getAllLinks();
+      return {
+        success: true,
+        data: links.map(link => ({
+          linkCode: link.linkCode,
+          originalUrl: link.originalUrl,
+          status: link.status,
+          expiresAt: link.expiresAt,
+          testUrl: `${process.env.BACKEND_URL || 'http://localhost:3080'}/affiliate/redirect/${link.linkCode}`
+        }))
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  }
+
+  @Post('create-test-link')
+  @ApiOperation({ summary: 'Tạo test affiliate link' })
+  async createTestLink() {
+    try {
+      // Kiểm tra xem có affiliate link nào tồn tại không
+      const existingLinks = await this.affiliateLinkService.getAllLinks();
+      console.log('🔍 Existing links count:', existingLinks.length);
+      
+      if (existingLinks.length > 0) {
+        const firstLink = existingLinks[0];
+        return {
+          success: true,
+          data: {
+            linkCode: firstLink.linkCode,
+            originalUrl: firstLink.originalUrl,
+            status: firstLink.status,
+            expiresAt: firstLink.expiresAt,
+            testUrl: `${process.env.BACKEND_URL || 'http://localhost:3080'}/affiliate/redirect/${firstLink.linkCode}`
+          }
+        };
+      }
+      
+      return {
+        success: false,
+        message: 'Không có affiliate link nào trong database'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
     }
   }
 }

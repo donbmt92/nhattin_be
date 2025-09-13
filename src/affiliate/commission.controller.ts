@@ -49,16 +49,22 @@ export class CommissionController {
     @Query('limit') limit: number = 10,
     @Query('status') status?: string
   ) {
-    // TODO: Implement commission history logic
-    const result = {
-      transactions: [],
-      pagination: {
-        page,
-        limit,
-        total: 0,
-        totalPages: 0
-      }
-    };
+    const userId = req.user.id;
+    
+    // Tìm affiliate ID từ user ID
+    const affiliate = await this.commissionService['affiliateRepo'].findByUserId(userId);
+    if (!affiliate) {
+      return {
+        success: false,
+        message: 'Không tìm thấy thông tin affiliate'
+      };
+    }
+
+    const result = await this.commissionService.getCommissionHistory(
+      affiliate._id.toString(),
+      page,
+      limit
+    );
     
     return {
       success: true,

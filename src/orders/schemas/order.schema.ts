@@ -12,6 +12,10 @@ export interface IOrder {
   status: OrderStatus;
   total_items: number;
   items: Types.ObjectId[];
+  affiliateCode?: string;
+  commissionAmount?: number;
+  commissionStatus?: string;
+  commissionPaidDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

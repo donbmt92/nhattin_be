@@ -30,7 +30,9 @@ export class AffiliateLinkService {
     createLinkDto: ICreateAffiliateLink
   ): Promise<AffiliateLinkDocument> {
     // Kiểm tra affiliate có tồn tại và active không
+    console.log('🔍 Looking for affiliate with ID:', affiliateId);
     const affiliate = await this.affiliateRepo.findById(affiliateId);
+    console.log('🔍 Found affiliate:', affiliate ? `${affiliate._id} - ${affiliate.status}` : 'null');
     if (!affiliate || affiliate.status !== 'ACTIVE') {
       throw new BadRequestException('Affiliate không tồn tại hoặc không active');
     }
@@ -145,6 +147,10 @@ export class AffiliateLinkService {
       .sort({ createdAt: -1 })
       .populate('productId', 'name price images')
       .exec();
+  }
+
+  async getAllLinks(): Promise<AffiliateLinkDocument[]> {
+    return this.affiliateLinkModel.find({}).exec();
   }
 
   async getAffiliateLinkStats(affiliateId: string): Promise<IAffiliateLinkStats> {
