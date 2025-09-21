@@ -8,6 +8,14 @@ import { HttpExceptionFilter } from './common/exception/http-exception.filter';
 // import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 async function bootstrap() {
+  // Debug environment variables
+  console.log('Environment Variables:');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('PORT:', process.env.PORT);
+  console.log('MONGODB_URI:', process.env.MONGODB_URI);
+  console.log('MONGOURL:', process.env.MONGOURL);
+  console.log('DATABASE:', process.env.DATABASE);
+  
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableCors();
   

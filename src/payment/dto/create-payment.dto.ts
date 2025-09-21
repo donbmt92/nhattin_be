@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-// import { IsString, IsMongoId, IsNotEmpty, IsEnum, IsOptional, IsBoolean, IsDateString, IsNumber, Min } from 'class-validator';
 import { Allow } from 'class-validator';
 import { PaymentStatus } from '../enum/payment-status.enum';
 

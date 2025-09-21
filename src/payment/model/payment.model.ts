@@ -11,6 +11,7 @@ export class PaymentDetailModel extends BaseModel {
   transaction_reference?: string;
   transfer_date?: Date;
   transfer_note?: string;
+  order_snapshot?: any; // Order snapshot data
 
   constructor(paymentDetail: any) {
     super(paymentDetail);
@@ -23,6 +24,7 @@ export class PaymentDetailModel extends BaseModel {
     this.transaction_reference = paymentDetail.transaction_reference;
     this.transfer_date = paymentDetail.transfer_date;
     this.transfer_note = paymentDetail.transfer_note;
+    this.order_snapshot = paymentDetail.order_snapshot;
   }
 
   static fromEntity(entity: any): PaymentDetailModel {
@@ -37,6 +39,7 @@ export class PaymentDetailModel extends BaseModel {
       transaction_reference: entity.transaction_reference,
       transfer_date: entity.transfer_date,
       transfer_note: entity.transfer_note,
+      order_snapshot: entity.order_snapshot,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt
     });

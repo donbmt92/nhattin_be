@@ -37,7 +37,7 @@ const ENV = process.env.NODE_ENV;
       serveRoot: '/uploads/'
     }),
     ConfigModule.forRoot({ 
-      envFilePath: !ENV ? '.env' : `.env.${ENV}`,
+      envFilePath: '.env',
       isGlobal: true 
     }),
     ThrottlerModule.forRoot([{
@@ -48,6 +48,7 @@ const ENV = process.env.NODE_ENV;
       dbName: process.env.DATABASE,
       connectionFactory: (connection) => {
         console.log(`Connected to database: ${process.env.DATABASE}`);
+        console.log(`MongoDB URI: ${process.env.MONGODB_URI || process.env.MONGOURL}`);
         return connection;
       }
     }),

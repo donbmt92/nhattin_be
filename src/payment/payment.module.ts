@@ -4,6 +4,7 @@ import {
   PaymentDetail,
   PaymentDetailSchema,
 } from './schemas/payment-detail.schema';
+import { Order, OrderSchema } from '../orders/schemas/order.schema';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
 import { OrdersModule } from '../orders/orders.module';
@@ -13,6 +14,7 @@ import { UsersModule } from '../users/users.module';
   imports: [
     MongooseModule.forFeature([
       { name: PaymentDetail.name, schema: PaymentDetailSchema },
+      { name: Order.name, schema: OrderSchema },
     ]),
     OrdersModule,
     UsersModule

@@ -26,11 +26,20 @@ export class PaymentController {
   }
 
   @Get()
-  @Description('Lấy danh sách thanh toán', [
-    { status: 200, description: 'Thành công' }
+  @Description('Lấy danh sách thanh toán đã hoàn thành', [
+    { status: 200, description: 'Thành công - Chỉ hiển thị những payment đã thanh toán thành công' }
   ])
   findAll() {
     return this.paymentService.findAll();
+  }
+
+  @Get('admin/all')
+  @Roles(Role.ADMIN)
+  @Description('Lấy tất cả thanh toán (Admin)', [
+    { status: 200, description: 'Thành công - Hiển thị tất cả payment bao gồm cả chưa thanh toán' }
+  ])
+  findAllForAdmin() {
+    return this.paymentService.findAllForAdmin();
   }
 
   @Get(':id')

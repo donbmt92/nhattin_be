@@ -10,12 +10,15 @@ import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { PaymentDetailModel } from './model/payment.model';
 import { MessengeCode } from '../common/exception/MessengeCode';
 import { OrdersService } from '../orders/orders.service';
+import { Order, OrderDocument } from '../orders/schemas/order.schema';
 
 @Injectable()
 export class PaymentService {
   constructor(
     @InjectModel(PaymentDetail.name)
     private paymentModel: Model<PaymentDetailDocument>,
+    @InjectModel(Order.name)
+    private orderModel: Model<OrderDocument>,
     private readonly ordersService: OrdersService
   ) {}
 
@@ -24,14 +27,6 @@ export class PaymentService {
   ): Promise<PaymentDetailModel> {
     console.log('createPaymentDto', createPaymentDto);
 
-    // Kiểm tra order tồn tại
-    // const order = await this.ordersService.findOne(createPaymentDto.id_order);
-    // if (!order) {
-    //   console.log("vào đây", order);
-
-    //   throw MessengeCode.ORDER.NOT_FOUND;
-    // }
-    // console.log('findOne', order);
     const paymentData = { ...createPaymentDto };
 
     // Convert transfer_date from string to Date if provided
@@ -39,9 +34,51 @@ export class PaymentService {
       paymentData.transfer_date = new Date(paymentData.transfer_date) as any;
     }
 
+    // 🔥 NEW: Populate order data nếu có id_order
+    let orderSnapshot = null;
+    if (createPaymentDto.id_order) {
+      try {
+        // Lấy order entity trực tiếp từ database
+        const orderEntity = await this.orderModel
+          .findById(new Types.ObjectId(createPaymentDto.id_order))
+          .lean()
+          .exec();
+          
+        if (orderEntity) {
+          // Lấy order items
+          const orderItems = await this.ordersService.getOrderItems(createPaymentDto.id_order);
+          
+          orderSnapshot = {
+            id: orderEntity._id.toString(),
+            uid: orderEntity.uid.toString(),
+            status: orderEntity.status,
+            total_items: orderEntity.total_items,
+            note: orderEntity.note,
+            voucher: orderEntity.voucher,
+            affiliateCode: orderEntity.affiliateCode,
+            commissionAmount: orderEntity.commissionAmount,
+            commissionStatus: orderEntity.commissionStatus,
+            createdAt: orderEntity.createdAt,
+            updatedAt: orderEntity.updatedAt,
+            items: orderItems.map(item => ({
+              id: item.id,
+              quantity: item.quantity,
+              old_price: item.old_price,
+              discount_precent: item.discount_precent,
+              final_price: item.final_price,
+              product_snapshot: item.product_snapshot
+            }))
+          };
+        }
+      } catch (error) {
+        console.warn('Không thể lấy thông tin order:', error);
+      }
+    }
+
     const createdPayment = new this.paymentModel({
       ...paymentData,
-      id_order: new Types.ObjectId(createPaymentDto.id_order)
+      id_order: createPaymentDto.id_order ? new Types.ObjectId(createPaymentDto.id_order) : null,
+      order_snapshot: orderSnapshot
     });
     console.log('createdPayment', createdPayment);
     const savedPayment = await createdPayment.save();
@@ -49,7 +86,30 @@ export class PaymentService {
   }
 
   async findAll(): Promise<PaymentDetailModel[]> {
-    const payments = await this.paymentModel.find().populate('id_order').exec();
+    // Chỉ lấy những payment đã thanh toán thành công
+    const payments = await this.paymentModel
+      .find({ status: 'completed' })
+      .populate({
+        path: 'id_order',
+        model: 'Order',
+        select: 'id status total_items note createdAt'
+      })
+      .exec();
+      console.log('payments', payments);
+      
+    return PaymentDetailModel.fromEntities(payments);
+  }
+
+  async findAllForAdmin(): Promise<PaymentDetailModel[]> {
+    // Admin có thể xem tất cả payment (bao gồm cả chưa thanh toán)
+    const payments = await this.paymentModel
+      .find()
+      .populate({
+        path: 'id_order',
+        model: 'Order',
+        select: 'id status total_items note createdAt'
+      })
+      .exec();
     return PaymentDetailModel.fromEntities(payments);
   }
 
