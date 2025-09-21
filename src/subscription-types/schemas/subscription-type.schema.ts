@@ -30,6 +30,25 @@ export class SubscriptionType {
   type_name: string;
 
   @ApiProperty({
+    description: 'Tên hiển thị của gói đăng ký',
+    example: 'Gói Cao cấp',
+    minLength: 2,
+    maxLength: 100,
+    required: false
+  })
+  @Prop({ required: false })
+  name?: string;
+
+  @ApiProperty({
+    description: 'Mô tả chi tiết về gói đăng ký',
+    example: 'Gói dịch vụ cao cấp với đầy đủ tính năng',
+    maxLength: 500,
+    required: false
+  })
+  @Prop({ required: false })
+  description?: string;
+
+  @ApiProperty({
     description: 'Trạng thái gói đăng ký',
     enum: SubscriptionTypeStatus,
     default: SubscriptionTypeStatus.ACTIVE

@@ -17,6 +17,12 @@ export interface OrderItemModel {
     base_price: number;
     category_id: Types.ObjectId;
     category_name: string;
+    subscription_info?: {
+      subscription_type_name: string;
+      subscription_duration: string;
+      subscription_days: number;
+      subscription_price: number;
+    };
   };
 }
 

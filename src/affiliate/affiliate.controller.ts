@@ -6,7 +6,9 @@ import {
   Body, 
   UseGuards, 
   HttpCode,
-  HttpStatus
+  HttpStatus,
+  Query,
+  Param
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -235,6 +237,154 @@ export class AffiliateController {
     @User('_id') userId: string
   ) {
     const result = await this.affiliateService.requestPayout(userId, payoutDto.amount);
+    
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  // Admin endpoints
+  @Get('admin/list')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy danh sách tất cả affiliate (Admin)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy danh sách affiliate thành công'
+  })
+  async getAllAffiliates(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('status') status?: string
+  ) {
+    console.log('=== Controller getAllAffiliates ===');
+    console.log('Query params:', { page, limit, status });
+    
+    const result = await this.affiliateService.getAllAffiliates(page, limit, status);
+    
+    console.log('Service result:', {
+      success: true,
+      dataLength: result.affiliates?.length,
+      total: result.total,
+      page: result.page
+    });
+    
+    const response = {
+      success: true,
+      data: result
+    };
+    
+    console.log('Final response:', response);
+    console.log('===============================');
+    
+    return response;
+  }
+
+  @Get('admin/stats')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy thống kê affiliate tổng quan (Admin)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy thống kê thành công'
+  })
+  async getAdminStats() {
+    console.log('=== Controller getAdminStats ===');
+    
+    const result = await this.affiliateService.getAdminStats();
+    
+    console.log('Stats result:', result);
+    
+    const response = {
+      success: true,
+      data: result
+    };
+    
+    console.log('Stats response:', response);
+    console.log('===============================');
+    
+    return response;
+  }
+
+  @Get('admin/detail/:id')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy chi tiết affiliate theo ID (Admin)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy chi tiết affiliate thành công'
+  })
+  async getAffiliateById(@Param('id') id: string) {
+    const result = await this.affiliateService.getAffiliateById(id);
+    
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  @Put('admin/:id/status')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cập nhật trạng thái affiliate (Admin)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Cập nhật trạng thái thành công'
+  })
+  async updateAffiliateStatus(
+    @Param('id') id: string,
+    @Body() statusDto: { status: string }
+  ) {
+    const result = await this.affiliateService.updateAffiliateStatus(id, statusDto.status);
+    
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  @Get('admin/:id/commissions')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy lịch sử hoa hồng của affiliate (Admin)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy lịch sử hoa hồng thành công'
+  })
+  async getAffiliateCommissions(
+    @Param('id') id: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10
+  ) {
+    const result = await this.affiliateService.getAffiliateCommissions(id, page, limit);
+    
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  @Get('admin/:id/links')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy affiliate links của affiliate (Admin)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lấy affiliate links thành công'
+  })
+  async getAffiliateLinks(
+    @Param('id') id: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10
+  ) {
+    const result = await this.affiliateService.getAffiliateLinks(id, page, limit);
     
     return {
       success: true,

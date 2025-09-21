@@ -16,6 +16,7 @@ export interface IOrder {
   commissionAmount?: number;
   commissionStatus?: string;
   commissionPaidDate?: Date;
+  subscription_id?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +68,10 @@ export class Order implements IOrder {
   
   @Prop({ type: Date })
   commissionPaidDate?: Date;
+
+  // 🔥 NEW: Subscription field
+  @Prop({ type: Types.ObjectId, ref: 'Subscription', required: false, index: true })
+  subscription_id?: Types.ObjectId;
 
   createdAt: Date;
   updatedAt: Date;

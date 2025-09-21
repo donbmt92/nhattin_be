@@ -70,4 +70,68 @@ export class BuyNowDto {
   })
   @IsString()
   userEmail: string;
+
+  // Subscription fields
+  @ApiProperty({ 
+    description: 'ID của subscription type',
+    required: false,
+    example: '65f2e0a3a2e0c60c848d3e15'
+  })
+  @IsMongoId()
+  @IsOptional()
+  subscription_type_id?: string;
+
+  @ApiProperty({ 
+    description: 'ID của subscription duration',
+    required: false,
+    example: '65f2e0a3a2e0c60c848d3e16'
+  })
+  @IsMongoId()
+  @IsOptional()
+  subscription_duration_id?: string;
+
+  @ApiProperty({ 
+    description: 'Tên subscription type',
+    required: false,
+    example: 'Premium'
+  })
+  @IsString()
+  @IsOptional()
+  subscription_type_name?: string;
+
+  @ApiProperty({ 
+    description: 'Thời hạn subscription',
+    required: false,
+    example: '1 tháng'
+  })
+  @IsString()
+  @IsOptional()
+  subscription_duration?: string;
+
+  @ApiProperty({ 
+    description: 'Số ngày của subscription',
+    required: false,
+    example: 30
+  })
+  @IsNumber()
+  @IsOptional()
+  subscription_days?: number;
+
+  @ApiProperty({ 
+    description: 'Giá của subscription duration',
+    required: false,
+    example: 149000
+  })
+  @IsNumber()
+  @IsOptional()
+  subscription_price?: number;
+
+  @ApiProperty({ 
+    description: 'Tổng tiền (subscription_price * quantity)',
+    required: false,
+    example: 298000
+  })
+  @IsNumber()
+  @IsOptional()
+  total_price?: number;
 }

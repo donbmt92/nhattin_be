@@ -16,6 +16,14 @@ export class SubscriptionDuration {
   product_id: Types.ObjectId;
 
   @ApiProperty({
+    description: 'ID của loại gói đăng ký',
+    type: String,
+    example: '65abc123def456'
+  })
+  @Prop({ type: Types.ObjectId, ref: 'SubscriptionType', required: true })
+  subscription_type_id: Types.ObjectId;
+
+  @ApiProperty({
     description: 'Thời gian sử dụng',
     example: '1 tháng',
     minLength: 2,
@@ -31,6 +39,14 @@ export class SubscriptionDuration {
   })
   @Prop({ required: true })
   price: number;
+
+  @ApiProperty({
+    description: 'Số ngày của thời hạn',
+    example: 30,
+    minimum: 1
+  })
+  @Prop({ required: true })
+  days: number;
 
   @ApiProperty({
     description: 'Thời gian tạo',

@@ -3,6 +3,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Query, Logg
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SubscriptionTypesService } from './subscription-types.service';
 import { CreateSubscriptionTypeDto } from './dto/create-subscription-type.dto';
+import { UpdateSubscriptionTypeDto } from './dto/update-subscription-type.dto';
 import { SubscriptionTypeModel } from './models/subscription-type.model';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -29,9 +30,12 @@ export class SubscriptionTypesController {
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách tất cả loại gói đăng ký' })
   @ApiResponse({ status: 200, description: 'Danh sách loại gói đăng ký', type: [SubscriptionTypeModel] })
-  async findAll(@Query('product_id') productId?: string): Promise<SubscriptionTypeModel[]> {
+  async findAll(@Query('product_id') productId?: string, @Query('with_durations') withDurations?: string): Promise<SubscriptionTypeModel[] | any[]> {
     if (productId) {
       this.logger.log(`Finding all subscription types with product_id: ${productId}`);
+      if (withDurations === 'true') {
+        return this.subscriptionTypesService.findByProductIdWithDurations(productId);
+      }
       return this.subscriptionTypesService.findByProductId(productId);
     }
     this.logger.log('Finding all subscription types without product_id');
@@ -74,7 +78,7 @@ export class SubscriptionTypesController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy loại gói đăng ký' })
   async update(
     @Param('id') id: string,
-    @Body() updateSubscriptionTypeDto: Partial<CreateSubscriptionTypeDto>
+    @Body() updateSubscriptionTypeDto: UpdateSubscriptionTypeDto
   ): Promise<SubscriptionTypeModel> {
     this.logger.log(`Updating subscription type with ID: ${id} and data: ${JSON.stringify(updateSubscriptionTypeDto)}`);
     return this.subscriptionTypesService.update(id, updateSubscriptionTypeDto);

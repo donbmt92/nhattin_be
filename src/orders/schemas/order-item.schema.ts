@@ -32,7 +32,17 @@ export class OrderItem {
       description: { type: String, required: true },
       base_price: { type: Number, required: true },
       category_id: { type: Types.ObjectId, required: true },
-      category_name: { type: String, required: true }
+      category_name: { type: String, required: true },
+      subscription_info: {
+        type: {
+          subscription_type_name: { type: String },
+          subscription_duration: { type: String },
+          subscription_days: { type: Number },
+          subscription_price: { type: Number }
+        },
+        required: false,
+        _id: false
+      }
     },
     required: false,
     _id: false
@@ -44,6 +54,12 @@ export class OrderItem {
     base_price: number;
     category_id: Types.ObjectId;
     category_name: string;
+    subscription_info?: {
+      subscription_type_name: string;
+      subscription_duration: string;
+      subscription_days: number;
+      subscription_price: number;
+    };
   };
 }
 

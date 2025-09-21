@@ -55,14 +55,12 @@ export class AffiliateRepo {
     ).exec();
   }
 
-  async findAll(query: any = {}, page: number = 1, limit: number = 10): Promise<{ data: AffiliateDocument[], total: number }> {
-    const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
-      this.affiliateModel.find(query).skip(skip).limit(limit).exec(),
-      this.affiliateModel.countDocuments(query).exec()
-    ]);
-    
-    return { data, total };
+  async findAll(query: any = {}, skip: number = 0, limit: number = 10): Promise<AffiliateDocument[]> {
+    return this.affiliateModel.find(query).skip(skip).limit(limit).exec();
+  }
+
+  async count(query: any = {}): Promise<number> {
+    return this.affiliateModel.countDocuments(query).exec();
   }
 
   async delete(id: string): Promise<boolean> {

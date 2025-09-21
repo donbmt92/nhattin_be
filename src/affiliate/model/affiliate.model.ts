@@ -49,6 +49,7 @@ export interface ICreateAffiliateFromDto {
 export interface IUpdateAffiliate {
   commissionRate?: number;
   totalEarnings?: number;
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   paymentInfo?: {
     bankName: string;
     accountNumber: string;

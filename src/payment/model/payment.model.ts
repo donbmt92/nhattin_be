@@ -14,7 +14,11 @@ export class PaymentDetailModel extends BaseModel {
   order_snapshot?: any; // Order snapshot data
 
   constructor(paymentDetail: any) {
-    super(paymentDetail);
+    super({
+      id: paymentDetail.id,
+      createdAt: paymentDetail.createdAt,
+      updatedAt: paymentDetail.updatedAt
+    });
     this.id_order = paymentDetail.id_order;
     this.provider = paymentDetail.provider;
     this.status = paymentDetail.status;

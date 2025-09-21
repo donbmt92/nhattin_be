@@ -153,4 +153,12 @@ export class UsersService {
     // async getUserByJWT(identifier: string){
         
     // }
+
+    async getUserById(id: string): Promise<any> {
+        const user = await this._usersRepo.findById(id);
+        if (!user) {
+            throw MessengeCode.USER.NOT_FOUND;
+        }
+        return user;
+    }
 }

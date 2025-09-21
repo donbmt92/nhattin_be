@@ -3,25 +3,29 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsEnum, IsOptional, IsMongoId, MinLength, MaxLength } from 'class-validator';
 import { SubscriptionTypeStatus } from '../schemas/subscription-type.schema';
 
-export class CreateSubscriptionTypeDto {
+export class UpdateSubscriptionTypeDto {
   @ApiProperty({
     description: 'ID của sản phẩm',
     type: String,
-    example: '65abc123def456'
+    example: '65abc123def456',
+    required: false
   })
   @IsMongoId()
-  product_id: string;
+  @IsOptional()
+  product_id?: string;
 
   @ApiProperty({
     description: 'Tên gói đăng ký',
     example: 'Premium',
     minLength: 2,
-    maxLength: 50
+    maxLength: 50,
+    required: false
   })
   @IsString()
   @MinLength(2)
   @MaxLength(50)
-  type_name: string;
+  @IsOptional()
+  type_name?: string;
 
   @ApiProperty({
     description: 'Tên hiển thị của gói đăng ký',
@@ -56,4 +60,4 @@ export class CreateSubscriptionTypeDto {
   @IsEnum(SubscriptionTypeStatus)
   @IsOptional()
   status?: SubscriptionTypeStatus;
-} 
+}

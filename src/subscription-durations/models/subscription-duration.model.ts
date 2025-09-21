@@ -17,6 +17,12 @@ export class SubscriptionDurationModel {
   product_id: string;
 
   @ApiProperty({
+    description: 'ID của loại gói đăng ký',
+    example: '65abc123def456'
+  })
+  subscription_type_id: string;
+
+  @ApiProperty({
     description: 'Thời gian sử dụng',
     example: '1 tháng'
   })
@@ -59,6 +65,7 @@ export class SubscriptionDurationModel {
     const model = new SubscriptionDurationModel({
       _id: entity._id,
       product_id: entity.product_id,
+      subscription_type_id: entity.subscription_type_id,
       duration: entity.duration,
       price: entity.price,
       days: entity.days,

@@ -4,6 +4,8 @@ import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { PaymentStatus } from './enum/payment-status.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guard/role.guard';
 
 describe('PaymentController', () => {
   let controller: PaymentController;
@@ -71,8 +73,34 @@ describe('PaymentController', () => {
             remove: jest.fn(),
           },
         },
+        {
+          provide: 'UsersService',
+          useValue: {
+            findById: jest.fn(),
+            findByEmail: jest.fn(),
+            findByPhone: jest.fn(),
+          },
+        },
+        {
+          provide: 'JwtService',
+          useValue: {
+            sign: jest.fn(),
+            verify: jest.fn(),
+          },
+        },
+        {
+          provide: 'Reflector',
+          useValue: {
+            get: jest.fn(),
+          },
+        },
       ],
-    }).compile();
+    })
+    .overrideGuard(JwtAuthGuard)
+    .useValue({ canActivate: () => true })
+    .overrideGuard(RolesGuard)
+    .useValue({ canActivate: () => true })
+    .compile();
 
     controller = module.get<PaymentController>(PaymentController);
     service = module.get<PaymentService>(PaymentService);
@@ -457,7 +485,11 @@ describe('PaymentController', () => {
       // Arrange
       const paymentId = '507f1f77bcf86cd799439013';
       const pendingPayment = { ...mockPayment, status: PaymentStatus.PENDING };
-      const approvedPayment = { ...mockPayment, status: PaymentStatus.COMPLETED };
+      const approvedPayment = { 
+        ...mockPayment, 
+        status: PaymentStatus.COMPLETED,
+        transaction_reference: 'ADMIN_APPROVED_TXN123456'
+      };
 
       jest.spyOn(service, 'findOne').mockResolvedValue(pendingPayment);
       jest.spyOn(service, 'update').mockResolvedValue(approvedPayment);
@@ -482,7 +514,11 @@ describe('PaymentController', () => {
       // Arrange
       const paymentId = '507f1f77bcf86cd799439013';
       const pendingPayment = { ...mockPayment, status: PaymentStatus.PENDING };
-      const rejectedPayment = { ...mockPayment, status: PaymentStatus.FAILED };
+      const rejectedPayment = { 
+        ...mockPayment, 
+        status: PaymentStatus.FAILED,
+        transaction_reference: 'ADMIN_REJECTED_TXN123456'
+      };
 
       jest.spyOn(service, 'findOne').mockResolvedValue(pendingPayment);
       jest.spyOn(service, 'update').mockResolvedValue(rejectedPayment);

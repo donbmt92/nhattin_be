@@ -16,6 +16,9 @@ import { IProduct, ICategory } from './interfaces/product.interface';
 import { OrderStatus } from './enum/order-status.enum';
 import { AffiliateService } from '../affiliate/affiliate.service';
 import { AffiliateLinkService } from '../affiliate/affiliate-link.service';
+import { SubscriptionTypesService } from '../subscription-types/subscription-types.service';
+import { SubscriptionDurationsService } from '../subscription-durations/subscription-durations.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class OrdersService {
@@ -28,6 +31,9 @@ export class OrdersService {
     @InjectConnection() private readonly connection: mongoose.Connection,
     private readonly affiliateService: AffiliateService,
     private readonly affiliateLinkService: AffiliateLinkService,
+    private readonly subscriptionTypesService: SubscriptionTypesService,
+    private readonly subscriptionDurationsService: SubscriptionDurationsService,
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
   async createFromCart(userId: string, createOrderDto: CreateOrderDto): Promise<any> {
@@ -102,24 +108,63 @@ export class OrdersService {
         if (existingOrderItem) {
           // Update existing order item quantity
           existingOrderItem.quantity += cartItem.quantity;
+          
+          // Update subscription data if available
+          if (cartItem.subscription_price) {
+            existingOrderItem.old_price = cartItem.subscription_price;
+            existingOrderItem.discount_precent = 0;
+            existingOrderItem.final_price = cartItem.subscription_price;
+            
+            // Update subscription info in product snapshot
+            if (!existingOrderItem.product_snapshot) {
+              existingOrderItem.product_snapshot = {
+                name: product.name,
+                image: product.image,
+                description: product.description,
+                base_price: product.base_price,
+                category_id: product.id_category,
+                category_name: category?.name || 'Unknown'
+              };
+            }
+            
+            existingOrderItem.product_snapshot.subscription_info = {
+              subscription_type_name: cartItem.subscription_type_name,
+              subscription_duration: cartItem.subscription_duration,
+              subscription_days: cartItem.subscription_days,
+              subscription_price: cartItem.subscription_price
+            };
+          }
+          
           await existingOrderItem.save({ session });
           updatedOrderItems.push(existingOrderItem);
         } else {
           // Create new order item
+          // Use subscription price if available, otherwise use product price
+          const itemPrice = cartItem.subscription_price || product.base_price;
+          const itemDiscount = cartItem.subscription_price ? 0 : (product.discount?.discount_precent || 0);
+          const finalPrice = itemPrice * (1 - itemDiscount / 100);
+
           const orderItem = new this.orderItemModel({
             id_order: savedOrder._id,
             id_product: product._id,
             quantity: cartItem.quantity,
-            old_price: product.base_price,
-            discount_precent: product.discount?.discount_precent || 0,
-            final_price: product.base_price * (1 - (product.discount?.discount_precent || 0) / 100),
+            old_price: itemPrice,
+            discount_precent: itemDiscount,
+            final_price: finalPrice,
             product_snapshot: {
               name: product.name,
               image: product.image,
               description: product.description,
               base_price: product.base_price,
               category_id: product.id_category,
-              category_name: category?.name || 'Unknown'
+              category_name: category?.name || 'Unknown',
+              // Add subscription info to product snapshot if available
+              subscription_info: cartItem.subscription_type_name ? {
+                subscription_type_name: cartItem.subscription_type_name,
+                subscription_duration: cartItem.subscription_duration,
+                subscription_days: cartItem.subscription_days,
+                subscription_price: cartItem.subscription_price
+              } : null
             }
           });
 
@@ -143,6 +188,36 @@ export class OrdersService {
       }
       await savedOrder.save({ session });
 
+      // 4.1. Create subscriptions for items with subscription data
+      const subscriptionsCreated = [];
+      for (const cartItem of cartItems) {
+        if (cartItem.subscription_type_id && cartItem.subscription_duration_id) {
+          try {
+            const subscriptionDto = {
+              product_id: cartItem.id_product.toString(),
+              subscription_type_id: cartItem.subscription_type_id.toString(),
+              subscription_duration_id: cartItem.subscription_duration_id.toString(),
+              notes: `Đơn hàng từ giỏ hàng: ${savedOrder._id} - ${createOrderDto.note || 'Không có ghi chú'}`
+            };
+
+            const createdSubscription = await this.subscriptionsService.create(subscriptionDto, userId);
+            subscriptionsCreated.push({
+              subscription_id: createdSubscription.id,
+              product_id: cartItem.id_product,
+              subscription_type_name: cartItem.subscription_type_name,
+              subscription_duration: cartItem.subscription_duration,
+              subscription_days: cartItem.subscription_days,
+              subscription_price: cartItem.subscription_price
+            });
+            
+            console.log('✅ Subscription created from cart:', createdSubscription.id);
+          } catch (subscriptionError) {
+            console.error('❌ Failed to create subscription from cart:', subscriptionError.message);
+            // Don't fail the order if subscription creation fails
+          }
+        }
+      }
+
       // 5. Commit transaction
       await session.commitTransaction();
 
@@ -160,7 +235,8 @@ export class OrdersService {
           discount_precent: item.discount_precent,
           final_price: item.final_price,
           product_snapshot: item.product_snapshot
-        }))
+        })),
+        subscriptions: subscriptionsCreated.length > 0 ? subscriptionsCreated : null
       };
 
     } catch (error) {
@@ -355,7 +431,7 @@ export class OrdersService {
   async getOrderItems(orderId: string): Promise<any[]> {
     try {
       // Find all order items for the given order ID
-      const orderItems = await this.orderItemModel.find({ id_order: orderId })
+      const orderItems = await this.orderItemModel.find({ id_order: new Types.ObjectId(orderId) })
         .populate({
           path: 'id_product',
           select: 'name price images description'
@@ -368,13 +444,19 @@ export class OrdersService {
       
       // Transform the order items to include product details
       return orderItems.map(item => ({
-        id: item._id,
-        product: item.id_product,
+        id: item._id.toString(),
         quantity: item.quantity,
-        discount_precent: item.discount_precent,
         old_price: item.old_price,
-        price: item.old_price * (1 - item.discount_precent / 100),
-        subtotal: item.quantity * item.old_price * (1 - item.discount_precent / 100)
+        discount_precent: item.discount_precent,
+        final_price: item.final_price,
+        product_snapshot: item.product_snapshot || {
+          name: (item.id_product as any)?.name || 'Sản phẩm',
+          image: (item.id_product as any)?.images?.[0] || '',
+          description: (item.id_product as any)?.description || 'Sản phẩm',
+          base_price: (item.id_product as any)?.price || item.old_price,
+          category_id: '',
+          category_name: 'Khác'
+        }
       }));
     } catch (error) {
       console.error('Error fetching order items:', error);
@@ -426,6 +508,38 @@ export class OrdersService {
       // 5. Get category info
       const category = await this.categoryModel.findById(product.id_category).lean() as ICategory;
 
+      // 5.1. Validate subscription data if provided
+      let subscriptionData = null;
+      if (buyNowDto.subscription_type_id && buyNowDto.subscription_duration_id) {
+        // Validate subscription type exists
+        const subscriptionType = await this.subscriptionTypesService.findById(buyNowDto.subscription_type_id);
+        if (!subscriptionType) {
+          throw new BadRequestException(`Subscription type không tồn tại: ${buyNowDto.subscription_type_id}`);
+        }
+
+        // Validate subscription duration exists
+        const subscriptionDuration = await this.subscriptionDurationsService.findById(buyNowDto.subscription_duration_id);
+        if (!subscriptionDuration) {
+          throw new BadRequestException(`Subscription duration không tồn tại: ${buyNowDto.subscription_duration_id}`);
+        }
+
+        // Validate subscription duration belongs to the subscription type
+        if (subscriptionDuration.subscription_type_id.toString() !== buyNowDto.subscription_type_id) {
+          throw new BadRequestException('Subscription duration không thuộc về subscription type đã chọn');
+        }
+
+        subscriptionData = {
+          subscription_type_id: buyNowDto.subscription_type_id,
+          subscription_duration_id: buyNowDto.subscription_duration_id,
+          subscription_type_name: buyNowDto.subscription_type_name || subscriptionType.type_name,
+          subscription_duration: buyNowDto.subscription_duration || subscriptionDuration.duration,
+          subscription_days: buyNowDto.subscription_days || subscriptionDuration.days,
+          subscription_price: buyNowDto.subscription_price || subscriptionDuration.price
+        };
+
+        console.log('📦 Subscription data validated:', subscriptionData);
+      }
+
       // 6. Create new order
       const order = new this.orderModel({
         uid: userId,
@@ -441,20 +555,32 @@ export class OrdersService {
       const savedOrder = await order.save({ session });
 
       // 7. Create order item
+      // Use subscription price if available, otherwise use product price
+      const itemPrice = subscriptionData ? subscriptionData.subscription_price : product.base_price;
+      const itemDiscount = subscriptionData ? 0 : (product.discount?.discount_precent || 0);
+      const finalPrice = itemPrice * (1 - itemDiscount / 100);
+
       const orderItem = new this.orderItemModel({
         id_order: savedOrder._id,
         id_product: product._id,
         quantity: buyNowDto.quantity,
-        old_price: product.base_price,
-        discount_precent: product.discount?.discount_precent || 0,
-        final_price: product.base_price * (1 - (product.discount?.discount_precent || 0) / 100),
+        old_price: itemPrice,
+        discount_precent: itemDiscount,
+        final_price: finalPrice,
         product_snapshot: {
           name: product.name,
           image: product.image,
           description: product.description,
           base_price: product.base_price,
           category_id: product.id_category,
-          category_name: category?.name || 'Unknown'
+          category_name: category?.name || 'Unknown',
+          // Add subscription info to product snapshot
+          subscription_info: subscriptionData ? {
+            subscription_type_name: subscriptionData.subscription_type_name,
+            subscription_duration: subscriptionData.subscription_duration,
+            subscription_days: subscriptionData.subscription_days,
+            subscription_price: subscriptionData.subscription_price
+          } : null
         }
       });
 
@@ -463,6 +589,29 @@ export class OrdersService {
       // 8. Update order with item ID
       savedOrder.items = [savedItem._id] as any;
       await savedOrder.save({ session });
+
+      // 8.1. Create subscription if subscription data provided
+      let createdSubscription = null;
+      if (subscriptionData) {
+        try {
+          const subscriptionDto = {
+            product_id: product._id.toString(),
+            subscription_type_id: subscriptionData.subscription_type_id,
+            subscription_duration_id: subscriptionData.subscription_duration_id,
+            notes: `Đơn hàng: ${savedOrder._id} - ${buyNowDto.note || 'Mua ngay'}`
+          };
+
+          createdSubscription = await this.subscriptionsService.create(subscriptionDto, userId);
+          console.log('✅ Subscription created:', createdSubscription.id);
+
+          // Update order with subscription info
+          savedOrder.subscription_id = createdSubscription.id;
+          await savedOrder.save({ session });
+        } catch (subscriptionError) {
+          console.error('❌ Failed to create subscription:', subscriptionError.message);
+          // Don't fail the order if subscription creation fails
+        }
+      }
 
       // 9. Skip inventory reduction - no warehouse management
 
@@ -513,7 +662,17 @@ export class OrdersService {
           discount_precent: savedItem.discount_precent,
           final_price: savedItem.final_price,
           product_snapshot: savedItem.product_snapshot
-        }]
+        }],
+        subscription: createdSubscription ? {
+          id: createdSubscription.id,
+          subscription_type_name: subscriptionData.subscription_type_name,
+          subscription_duration: subscriptionData.subscription_duration,
+          subscription_days: subscriptionData.subscription_days,
+          subscription_price: subscriptionData.subscription_price,
+          start_date: createdSubscription.start_date,
+          end_date: createdSubscription.end_date,
+          status: createdSubscription.status
+        } : null
       };
 
     } catch (error) {

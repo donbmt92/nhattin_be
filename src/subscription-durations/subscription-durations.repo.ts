@@ -27,6 +27,16 @@ export class SubscriptionDurationsRepo {
     return results;
   }
 
+  async findBySubscriptionTypeId(subscriptionTypeId: string): Promise<SubscriptionDurationDocument[]> {
+    const query = { subscription_type_id: subscriptionTypeId };
+    console.log('Executing Query by subscription_type_id:', JSON.stringify(query));
+    console.log('Looking for subscription_type_id:', subscriptionTypeId);
+    const results = await this.subscriptionDurationModel.find(query).exec();
+    console.log('Query Results by subscription_type_id:', JSON.stringify(results, null, 2));
+    console.log('Number of results found:', results.length);
+    return results;
+  }
+
   async create(createSubscriptionDurationDto: CreateSubscriptionDurationDto): Promise<SubscriptionDurationDocument> {
     const newSubscriptionDuration = new this.subscriptionDurationModel(createSubscriptionDurationDto);
     return newSubscriptionDuration.save();

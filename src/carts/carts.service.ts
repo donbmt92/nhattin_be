@@ -45,6 +45,26 @@ export class CartsService {
         // Update quantity of existing item
         existingItem.quantity += createCartDto.quantity;
         
+        // Update subscription data if provided
+        if (createCartDto.subscription_type_id) {
+          existingItem.subscription_type_id = new Types.ObjectId(createCartDto.subscription_type_id);
+        }
+        if (createCartDto.subscription_duration_id) {
+          existingItem.subscription_duration_id = new Types.ObjectId(createCartDto.subscription_duration_id);
+        }
+        if (createCartDto.subscription_type_name) {
+          existingItem.subscription_type_name = createCartDto.subscription_type_name;
+        }
+        if (createCartDto.subscription_duration) {
+          existingItem.subscription_duration = createCartDto.subscription_duration;
+        }
+        if (createCartDto.subscription_days) {
+          existingItem.subscription_days = createCartDto.subscription_days;
+        }
+        if (createCartDto.subscription_price) {
+          existingItem.subscription_price = createCartDto.subscription_price;
+        }
+        
         // Validate updated quantity
         if (existingItem.quantity <= 0) {
           await this.cartModel.deleteOne({ _id: existingItem._id });
@@ -55,12 +75,33 @@ export class CartsService {
       }
 
       // Create new cart item
-      const newCartItem = new this.cartModel({
+      const cartData: any = {
         uid: new Types.ObjectId(userId),
         id_product: new Types.ObjectId(createCartDto.id_product),
         quantity: createCartDto.quantity,
-      });
+      };
 
+      // Add subscription data if provided
+      if (createCartDto.subscription_type_id) {
+        cartData.subscription_type_id = new Types.ObjectId(createCartDto.subscription_type_id);
+      }
+      if (createCartDto.subscription_duration_id) {
+        cartData.subscription_duration_id = new Types.ObjectId(createCartDto.subscription_duration_id);
+      }
+      if (createCartDto.subscription_type_name) {
+        cartData.subscription_type_name = createCartDto.subscription_type_name;
+      }
+      if (createCartDto.subscription_duration) {
+        cartData.subscription_duration = createCartDto.subscription_duration;
+      }
+      if (createCartDto.subscription_days) {
+        cartData.subscription_days = createCartDto.subscription_days;
+      }
+      if (createCartDto.subscription_price) {
+        cartData.subscription_price = createCartDto.subscription_price;
+      }
+
+      const newCartItem = new this.cartModel(cartData);
       return await newCartItem.save();
     } catch (error) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {

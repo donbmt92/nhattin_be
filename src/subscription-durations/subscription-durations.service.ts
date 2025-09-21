@@ -2,6 +2,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SubscriptionDurationsRepo } from './subscription-durations.repo';
 import { CreateSubscriptionDurationDto } from './dto/create-subscription-duration.dto';
+import { UpdateSubscriptionDurationDto } from './dto/update-subscription-duration.dto';
 import { SubscriptionDurationModel } from './models/subscription-duration.model';
 import { MongooseUtils } from '../common/utils/mongoose.utils';
 
@@ -30,6 +31,11 @@ export class SubscriptionDurationsService {
     return subscriptionDurations.map(duration => SubscriptionDurationModel.fromEntity(duration));
   }
 
+  async findBySubscriptionTypeId(subscriptionTypeId: string): Promise<SubscriptionDurationModel[]> {
+    const subscriptionDurations = await this.subscriptionDurationsRepo.findBySubscriptionTypeId(subscriptionTypeId);
+    return subscriptionDurations.map(duration => SubscriptionDurationModel.fromEntity(duration));
+  }
+
   async create(createSubscriptionDurationDto: CreateSubscriptionDurationDto): Promise<SubscriptionDurationModel> {
     // Chuyển đổi string ID sang ObjectId
     const data = MongooseUtils.convertToObjectIds(createSubscriptionDurationDto);
@@ -38,7 +44,7 @@ export class SubscriptionDurationsService {
     return SubscriptionDurationModel.fromEntity(newSubscriptionDuration);
   }
 
-  async update(id: string, updateSubscriptionDurationDto: Partial<CreateSubscriptionDurationDto>): Promise<SubscriptionDurationModel> {
+  async update(id: string, updateSubscriptionDurationDto: UpdateSubscriptionDurationDto): Promise<SubscriptionDurationModel> {
     const existingSubscriptionDuration = await this.subscriptionDurationsRepo.findById(id);
     if (!existingSubscriptionDuration) {
       throw new NotFoundException(`Subscription duration with ID ${id} not found`);

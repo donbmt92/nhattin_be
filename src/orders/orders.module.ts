@@ -8,6 +8,9 @@ import { CartsModule } from '../carts/carts.module';
 import { ProductSchema } from '../products/schemas/product.schema';
 import { CategorySchema } from '../categories/schemas/category.schema';
 import { AffiliateModule } from '../affiliate/affiliate.module';
+import { SubscriptionTypesModule } from '../subscription-types/subscription-types.module';
+import { SubscriptionDurationsModule } from '../subscription-durations/subscription-durations.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -18,7 +21,10 @@ import { AffiliateModule } from '../affiliate/affiliate.module';
       { name: 'Category', schema: CategorySchema }
     ]),
     CartsModule,
-    AffiliateModule
+    AffiliateModule,
+    SubscriptionTypesModule,
+    SubscriptionDurationsModule,
+    SubscriptionsModule
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

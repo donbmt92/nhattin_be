@@ -3,6 +3,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Query } fro
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SubscriptionDurationsService } from './subscription-durations.service';
 import { CreateSubscriptionDurationDto } from './dto/create-subscription-duration.dto';
+import { UpdateSubscriptionDurationDto } from './dto/update-subscription-duration.dto';
 import { SubscriptionDurationModel } from './models/subscription-duration.model';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -11,7 +12,9 @@ import { Role } from '../users/enum/role.enum';
 import { Logger } from '@nestjs/common';
 
 @ApiTags('subscription-durations')
+@ApiBearerAuth()
 @Controller('subscription-durations')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class SubscriptionDurationsController {
   private readonly logger = new Logger(SubscriptionDurationsController.name);
 
@@ -23,6 +26,14 @@ export class SubscriptionDurationsController {
   async findByProductId(@Param('product_id') productId: string): Promise<SubscriptionDurationModel[]> {
     this.logger.log(`Finding subscription durations by product_id: ${productId}`);
     return this.subscriptionDurationsService.findByProductId(productId);
+  }
+
+  @Get('subscription-type/:subscription_type_id')
+  @ApiOperation({ summary: 'Lấy danh sách thời hạn gói đăng ký theo subscription_type_id' })
+  @ApiResponse({ status: 200, description: 'Danh sách thời hạn gói đăng ký', type: [SubscriptionDurationModel] })
+  async findBySubscriptionTypeId(@Param('subscription_type_id') subscriptionTypeId: string): Promise<SubscriptionDurationModel[]> {
+    this.logger.log(`Finding subscription durations by subscription_type_id: ${subscriptionTypeId}`);
+    return this.subscriptionDurationsService.findBySubscriptionTypeId(subscriptionTypeId);
   }
 
   @Get()
@@ -62,7 +73,7 @@ export class SubscriptionDurationsController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy thời hạn gói đăng ký' })
   async update(
     @Param('id') id: string,
-    @Body() updateSubscriptionDurationDto: Partial<CreateSubscriptionDurationDto>
+    @Body() updateSubscriptionDurationDto: UpdateSubscriptionDurationDto
   ): Promise<SubscriptionDurationModel> {
     return this.subscriptionDurationsService.update(id, updateSubscriptionDurationDto);
   }

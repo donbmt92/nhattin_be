@@ -3,7 +3,7 @@ export class BaseModel {
   createdAt?: any;
   updatedAt?: any;
   constructor(data: any) {
-    this._id = data?._id || data;
+    this._id = data?.id || data?._id;
     this.createdAt = data?.createdAt || undefined;
     this.updatedAt = data?.updatedAt || undefined;
   }

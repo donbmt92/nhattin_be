@@ -34,9 +34,10 @@ export class PaymentService {
       paymentData.transfer_date = new Date(paymentData.transfer_date) as any;
     }
 
-    // 🔥 NEW: Populate order data nếu có id_order
+    // 🔥 NEW: Luôn tạo order_snapshot khi có id_order
     let orderSnapshot = null;
     if (createPaymentDto.id_order) {
+      console.log('🔍 Tìm order với ID:', createPaymentDto.id_order);
       try {
         // Lấy order entity trực tiếp từ database
         const orderEntity = await this.orderModel
@@ -44,34 +45,71 @@ export class PaymentService {
           .lean()
           .exec();
           
+        console.log('🔍 Order entity tìm được:', orderEntity ? orderEntity._id : 'null');
+          
         if (orderEntity) {
           // Lấy order items
           const orderItems = await this.ordersService.getOrderItems(createPaymentDto.id_order);
           
           orderSnapshot = {
             id: orderEntity._id.toString(),
-            uid: orderEntity.uid.toString(),
-            status: orderEntity.status,
             total_items: orderEntity.total_items,
-            note: orderEntity.note,
-            voucher: orderEntity.voucher,
-            affiliateCode: orderEntity.affiliateCode,
-            commissionAmount: orderEntity.commissionAmount,
-            commissionStatus: orderEntity.commissionStatus,
-            createdAt: orderEntity.createdAt,
-            updatedAt: orderEntity.updatedAt,
             items: orderItems.map(item => ({
               id: item.id,
               quantity: item.quantity,
-              old_price: item.old_price,
-              discount_precent: item.discount_precent,
               final_price: item.final_price,
-              product_snapshot: item.product_snapshot
+              product_snapshot: {
+                name: item.product_snapshot?.name || 'Sản phẩm',
+                image: item.product_snapshot?.image || '',
+                description: item.product_snapshot?.description || 'Sản phẩm',
+                base_price: item.product_snapshot?.base_price || item.final_price,
+                category_id: item.product_snapshot?.category_id || '',
+                category_name: item.product_snapshot?.category_name || 'Khác'
+              }
             }))
           };
+          console.log('✅ Đã tạo order_snapshot từ order thực tế:', orderEntity._id);
+        } else {
+          // Order không tồn tại, tạo order_snapshot từ thông tin payment
+          orderSnapshot = {
+            id: createPaymentDto.id_order,
+            total_items: 1,
+            items: [{
+              id: "unknown",
+              quantity: 1,
+              final_price: createPaymentDto.amount,
+              product_snapshot: {
+                name: `Sản phẩm từ ${createPaymentDto.provider}`,
+                image: '',
+                description: `Sản phẩm từ ${createPaymentDto.provider}`,
+                base_price: createPaymentDto.amount,
+                category_id: '',
+                category_name: 'Khác'
+              }
+            }]
+          };
+          console.log('⚠️ Đã tạo order_snapshot từ thông tin payment vì order không tồn tại');
         }
       } catch (error) {
-        console.warn('Không thể lấy thông tin order:', error);
+        console.warn('❌ Lỗi khi tạo order_snapshot:', error);
+        // Fallback: tạo order_snapshot cơ bản
+        orderSnapshot = {
+          id: createPaymentDto.id_order,
+          total_items: 1,
+          items: [{
+            id: "error",
+            quantity: 1,
+            final_price: createPaymentDto.amount,
+            product_snapshot: {
+              name: "Sản phẩm không xác định",
+              image: '',
+              description: "Sản phẩm không xác định",
+              base_price: createPaymentDto.amount,
+              category_id: '',
+              category_name: 'Khác'
+            }
+          }]
+        };
       }
     }
 
@@ -89,15 +127,105 @@ export class PaymentService {
     // Chỉ lấy những payment đã thanh toán thành công
     const payments = await this.paymentModel
       .find({ status: 'completed' })
-      .populate({
-        path: 'id_order',
-        model: 'Order',
-        select: 'id status total_items note createdAt'
-      })
       .exec();
-      console.log('payments', payments);
+      console.log('payments raw:', payments);
+      console.log('payments length:', payments.length);
       
-    return PaymentDetailModel.fromEntities(payments);
+    // Cập nhật order_snapshot cho payments không có
+    for (const payment of payments) {
+      if (!payment.order_snapshot && payment.id_order) {
+        try {
+          // Lấy order từ database
+          const orderEntity = await this.orderModel
+            .findById(payment.id_order)
+            .lean()
+            .exec();
+            
+          if (orderEntity) {
+            // Lấy order items
+            const orderItems = await this.ordersService.getOrderItems(payment.id_order.toString());
+            
+            const orderSnapshot = {
+              id: orderEntity._id.toString(),
+              uid: orderEntity.uid.toString(),
+              status: orderEntity.status,
+              total_items: orderEntity.total_items,
+              note: orderEntity.note,
+              voucher: orderEntity.voucher,
+              affiliateCode: orderEntity.affiliateCode,
+              commissionAmount: orderEntity.commissionAmount,
+              commissionStatus: orderEntity.commissionStatus,
+              createdAt: orderEntity.createdAt,
+              updatedAt: orderEntity.updatedAt,
+              items: orderItems.map(item => ({
+                id: item.id,
+                quantity: item.quantity,
+                old_price: item.old_price,
+                discount_precent: item.discount_precent,
+                final_price: item.final_price,
+                product_snapshot: item.product_snapshot
+              }))
+            };
+            
+            // Cập nhật payment với order_snapshot
+            await this.paymentModel.updateOne(
+              { _id: payment._id },
+              { order_snapshot: orderSnapshot }
+            );
+            
+            payment.order_snapshot = orderSnapshot;
+            console.log('✅ Đã cập nhật order_snapshot cho payment:', payment._id);
+          } else {
+            // Order không tồn tại, tạo order_snapshot từ thông tin có sẵn
+            const orderSnapshot = {
+              id: payment.id_order.toString(),
+              uid: "Unknown",
+              status: "completed",
+              total_items: 1,
+              note: "Order đã bị xóa",
+              voucher: "",
+              affiliateCode: null,
+              commissionAmount: 0,
+              commissionStatus: "pending",
+              createdAt: (payment as any).createdAt || new Date(),
+              updatedAt: (payment as any).updatedAt || new Date(),
+              items: [{
+                id: "unknown",
+                quantity: 1,
+                old_price: payment.amount,
+                discount_precent: 0,
+                final_price: payment.amount,
+                product_snapshot: {
+                  name: "Sản phẩm từ thanh toán MoMo",
+                  image: "",
+                  description: "Sản phẩm từ thanh toán MoMo",
+                  base_price: payment.amount,
+                  category_id: "",
+                  category_name: "Khác"
+                }
+              }]
+            };
+            
+            // Cập nhật payment với order_snapshot
+            await this.paymentModel.updateOne(
+              { _id: payment._id },
+              { order_snapshot: orderSnapshot }
+            );
+            
+            payment.order_snapshot = orderSnapshot;
+            console.log('✅ Đã tạo order_snapshot từ thông tin có sẵn cho payment:', payment._id);
+          }
+        } catch (error) {
+          console.warn('❌ Không thể cập nhật order_snapshot cho payment:', payment._id, error);
+        }
+      }
+    }
+      
+    const result = PaymentDetailModel.fromEntities(payments);
+    console.log('result from fromEntities:', result);
+    console.log('result length:', result.length);
+    
+    return result;
   }
 
   async findAllForAdmin(): Promise<PaymentDetailModel[]> {
